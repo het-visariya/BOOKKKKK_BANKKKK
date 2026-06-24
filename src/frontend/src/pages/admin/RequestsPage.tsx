@@ -20,6 +20,7 @@ import {
   useCompletedForms,
   useManualBooksToPurchase,
   useUpdateManualBookStatus,
+  useGenerateProcurementPdf,
 } from "@/hooks/useBackend";
 import { RequestDetailsModal } from "@/pages/admin/RequestDetailsModal";
 import type { BookRequest } from "@/types";
@@ -250,8 +251,11 @@ function ManualBooksTab({
 }: {
   onOpenRequest: (requestId: string) => void;
 }) {
-  const { data: items = [], isLoading, isError } = useManualBooksToPurchase();
+  const { data: items = [], isLoading, isError, refetch } = useManualBooksToPurchase();
   const updateStatus = useUpdateManualBookStatus();
+  const generatePdf = useGenerateProcurementPdf();
+  const [selectedBooks, setSelectedBooks] = useState<Set<string>>(new Set());
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleStatusChange = async (
     item: ManualBookToPurchase,
@@ -268,6 +272,74 @@ function ManualBooksTab({
       toast.error("Failed to update status");
     }
   };
+
+  // Toggle checkbox selection
+  const toggleBookSelection = (requestId: string, bookIndex: number) => {
+    const key = `${requestId}:${bookIndex}`;
+    const newSelected = new Set(selectedBooks);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
+    } else {
+      newSelected.add(key);
+    }
+    setSelectedBooks(newSelected);
+  };
+
+  // Handle PDF generation
+  const handleGeneratePdf = async () => {
+    if (selectedBooks.size === 0) {
+      toast.error("Select at least one book");
+      return;
+    }
+
+    try {
+      const booksToInclude = items.flatMap((item, i) => {
+        const key = `${item.requestId}:${item.manualIndex}`;
+        if (!selectedBooks.has(key)) return [];
+        return [{
+          requestId: item.requestId,
+          bookIndex: item.manualIndex,
+          bookTitle: item.procurement.bookTitle,
+          author: item.procurement.author,
+          publisher: item.procurement.publisher,
+          edition: item.procurement.edition,
+          studentName: item.studentName,
+          studentId: item.studentId,
+        }];
+      });
+
+      const result = await generatePdf.mutateAsync({ selectedBooks: booksToInclude });
+      const pdfUrl = result?.data?.pdfUrl;
+
+      if (pdfUrl) {
+        const fullPdfUrl = pdfUrl.startsWith("http")
+          ? pdfUrl
+          : `${window.location.origin}${pdfUrl}`;
+
+        const link = document.createElement("a");
+        link.href = fullPdfUrl;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.download = result.data.pdfFileName || "procurement.pdf";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // Clear selection after successful PDF generation
+      setSelectedBooks(new Set());
+      setShowConfirmDialog(false);
+      toast.success("PDF generated and download started");
+
+      // Refresh the list
+      await refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to generate PDF");
+    }
+  };
+
+  // Count unpurchased books (eligible for procurement)
+  const unpurchasedCount = items.filter(item => !item.isPurchased).length;
 
   if (isLoading)
     return (
@@ -305,88 +377,186 @@ function ManualBooksTab({
     );
 
   return (
-    <div className="space-y-3">
-      {items.map((item, i) => (
-        <div
-          key={`${item.requestId}-${item.procurement.id}`}
-          className="bg-card border border-sky-100 rounded-2xl shadow-sm overflow-hidden"
-          data-ocid={`admin.manual_books.item.${i + 1}`}
-        >
-          <div className="px-4 py-3 bg-orange-50 border-b border-orange-100 flex items-start justify-between gap-3 flex-wrap">
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold text-foreground text-sm truncate">
-                {item.procurement.bookTitle}
-              </div>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs text-muted-foreground">
-                  {item.studentName}
-                </span>
-                {item.studentId && (
-                  <span className="font-mono text-xs bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded">
-                    {item.studentId}
-                  </span>
-                )}
-                <Badge
-                  className={`text-xs border-0 ${statusBadgeCls(item.procurement.status)}`}
-                >
-                  {statusLabel(item.procurement.status)}
-                </Badge>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
-              <Select
-                value={item.procurement.status}
-                onValueChange={(v) =>
-                  handleStatusChange(item, v as BookDecisionStatus)
-                }
-                disabled={
-                  updateStatus.isPending ||
-                  (item.procurement.status as string) === "Returned"
-                }
-              >
-                <SelectTrigger
-                  className="h-8 w-44 text-xs"
-                  data-ocid={`admin.manual_books.status_select.${i + 1}`}
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MANUAL_STATUS_OPTIONS.map((opt) => (
-                    <SelectItem
-                      key={opt.value}
-                      value={opt.value}
-                      className="text-xs"
-                    >
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <div className="space-y-4">
+      {/* Header with PDF generation button */}
+      {unpurchasedCount > 0 && (
+        <div className="flex items-center justify-between gap-4 p-4 bg-sky-50 border border-sky-100 rounded-xl">
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              {selectedBooks.size > 0 
+                ? `${selectedBooks.size} book${selectedBooks.size !== 1 ? 's' : ''} selected`
+                : `${unpurchasedCount} unpurchased book${unpurchasedCount !== 1 ? 's' : ''}`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Select books to include in procurement batch
+            </p>
+          </div>
+          <Button
+            onClick={() => setShowConfirmDialog(true)}
+            disabled={selectedBooks.size === 0 || generatePdf.isPending}
+            className="shrink-0"
+            data-ocid="admin.manual_books.generate_pdf_button"
+          >
+            {generatePdf.isPending ? (
+              <>
+                <span className="animate-spin mr-2">⟳</span>
+                Generating PDF…
+              </>
+            ) : (
+              `Generate Purchase PDF (${selectedBooks.size})`
+            )}
+          </Button>
+        </div>
+      )}
+
+      {/* Confirmation dialog for PDF generation */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6 space-y-4">
+            <h2 className="text-lg font-bold text-foreground">Generate Procurement PDF?</h2>
+            <p className="text-sm text-muted-foreground">
+              {selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} will be marked as purchased and included in the procurement list.
+            </p>
+            <div className="flex gap-3">
               <Button
-                size="sm"
                 variant="outline"
-                className="h-8 text-xs border-sky-200"
-                onClick={() => onOpenRequest(item.requestId)}
-                data-ocid={`admin.manual_books.view_button.${i + 1}`}
+                onClick={() => setShowConfirmDialog(false)}
+                disabled={generatePdf.isPending}
+                className="flex-1"
               >
-                View Full Challan
+                Cancel
+              </Button>
+              <Button
+                onClick={handleGeneratePdf}
+                disabled={generatePdf.isPending}
+                className="flex-1"
+              >
+                {generatePdf.isPending ? "Generating…" : "Generate PDF"}
               </Button>
             </div>
           </div>
-          {(item.studentCourse || item.collectionDate) && (
-            <div className="px-4 py-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
-              {item.studentCourse && (
-                <span>
-                  {item.studentCourse} {item.studentYear}
-                </span>
-              )}
-              {item.collectionDate && (
-                <span>Collection: {item.collectionDate}</span>
+        </div>
+      )}
+
+      {/* Book cards */}
+      <div className="space-y-3">
+        {items.map((item, i) => {
+          const key = `${item.requestId}:${item.manualIndex}`;
+          const isSelected = selectedBooks.has(key);
+          const isPurchased = item.isPurchased;
+          const cardBgClass = isPurchased
+            ? "bg-emerald-50 border-emerald-100"
+            : "bg-card border-sky-100";
+
+          return (
+            <div
+              key={key}
+              className={`${cardBgClass} border rounded-2xl shadow-sm overflow-hidden transition-colors`}
+              data-ocid={`admin.manual_books.item.${i + 1}`}
+            >
+              <div className="px-4 py-3 bg-orange-50 border-b border-orange-100 flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {/* Checkbox - only show if not purchased */}
+                  {!isPurchased && (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleBookSelection(item.requestId, item.manualIndex)}
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 cursor-pointer"
+                      data-ocid={`admin.manual_books.checkbox.${i + 1}`}
+                    />
+                  )}
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground text-sm truncate">
+                      {item.procurement.bookTitle}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs text-muted-foreground">
+                        {item.studentName}
+                      </span>
+                      {item.studentId && (
+                        <span className="font-mono text-xs bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded">
+                          {item.studentId}
+                        </span>
+                      )}
+                      {isPurchased ? (
+                        <Badge className="text-xs border-0 bg-emerald-100 text-emerald-700">
+                          ✓ Purchased
+                        </Badge>
+                      ) : (
+                        <Badge
+                          className={`text-xs border-0 ${statusBadgeCls(item.procurement.status)}`}
+                        >
+                          {statusLabel(item.procurement.status)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status dropdown - disabled if purchased */}
+                {!isPurchased && (
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <Select
+                      value={item.procurement.status}
+                      onValueChange={(v) =>
+                        handleStatusChange(item, v as BookDecisionStatus)
+                      }
+                      disabled={updateStatus.isPending || (item.procurement.status as string) === "Returned"}
+                    >
+                      <SelectTrigger
+                        className="h-8 w-44 text-xs"
+                        data-ocid={`admin.manual_books.status_select.${i + 1}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MANUAL_STATUS_OPTIONS.map((opt) => (
+                          <SelectItem
+                            key={opt.value}
+                            value={opt.value}
+                            className="text-xs"
+                          >
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs border-sky-200"
+                      onClick={() => onOpenRequest(item.requestId)}
+                      data-ocid={`admin.manual_books.view_button.${i + 1}`}
+                    >
+                      View Full Challan
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {(item.studentCourse || item.collectionDate) && (
+                <div className="px-4 py-2 flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
+                  {item.studentCourse && (
+                    <span>
+                      {item.studentCourse} {item.studentYear}
+                    </span>
+                  )}
+                  {item.collectionDate && (
+                    <span>Collection: {item.collectionDate}</span>
+                  )}
+                  {isPurchased && (
+                    <span className="text-emerald-600 font-medium">
+                      Purchased in batch
+                    </span>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -4,6 +4,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
+export const LOGO_SRC = "/assets/svga-logo.png";
+
 /** SVGA Logo — transparent PNG, no circular cropping, deep blue navbar aware */
 export function SVGALogo({
   size = "md",
@@ -31,8 +33,8 @@ export function SVGALogo({
   return (
     <div className="flex items-center gap-2.5">
       <img
-        src="/assets/svga-logo.png"
-        alt="SVGA Logo"
+        src={LOGO_SRC}
+        alt="SVGA Book Bank"
         className={`${imgSizes[size]} object-contain shrink-0`}
       />
       <div className="flex flex-col leading-none">

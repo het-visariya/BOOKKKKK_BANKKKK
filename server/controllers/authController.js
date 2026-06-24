@@ -236,68 +236,268 @@ const registerAndPay = async (req, res) => {
   }
 };
 
-// --- Demo OTP (in-memory store for local development) ---
-const otpStore = new Map();
-
+// --- MSG91 OTP Integration ---
 const sendOtp = async (req, res) => {
   try {
     const { aadhaarNumber, phone } = req.body;
     if (!phone) {
-      return res.status(400).json({ success: false, message: 'Phone is required' });
+      return res.status(400).json({ success: false, message: 'Phone number is required' });
     }
-    const otp = String(Math.floor(100000 + Math.random() * 900000));
-    const key = `${aadhaarNumber || ''}:${phone}`;
-    otpStore.set(key, { otp, expiresAt: Date.now() + 10 * 60 * 1000 });
-    console.log(`[Auth] Demo OTP for ${phone}: ${otp}`);
-    return res.json({ success: true, otp, demo: true });
+
+    // Validate phone format (10 digits)
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Phone must be 10 digits' });
+    }
+
+    const msg91ApiKey = process.env.MSG91_API_KEY;
+    const msg91TemplateId = process.env.MSG91_TEMPLATE_ID;
+    const countryCode = process.env.MSG91_COUNTRY_CODE || '91';
+
+    // DEMO MODE: If MSG91 is not configured, use in-memory OTP store with 4-digit OTP
+    if (!msg91ApiKey || !msg91TemplateId) {
+      const demoOtp = String(Math.floor(1000 + Math.random() * 9000));
+      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+      
+      global.otpStore.set(cleanPhone, {
+        otp: demoOtp,
+        expiresAt,
+        attempts: 0,
+      });
+
+      console.log(`[Auth] DEMO OTP sent to +${countryCode}${cleanPhone}: ${demoOtp}`);
+      return res.json({
+        success: true,
+        message: `OTP sent to +${countryCode}${cleanPhone}`,
+        requestId: `demo_${Date.now()}`,
+      });
+    }
+
+    // PRODUCTION MODE: Use MSG91 API
+    const msg91Url = `https://api.msg91.com/api/v5/otp?template_id=${msg91TemplateId}&mobile=${countryCode}${cleanPhone}&authkey=${msg91ApiKey}`;
+
+    try {
+      const response = await fetch(msg91Url, { method: 'GET' });
+      const data = await response.json();
+
+      // Treat both "success" and "already verified" as valid
+      if (
+        !response.ok ||
+        (
+          data.type !== 'success' &&
+          data.message !== 'Mobile no. already verified'
+        )
+      ) {
+        console.error('[Auth] MSG91 verification failed:', data);
+
+        return res.status(401).json({
+          success: false,
+          message: data.message || 'Invalid or expired OTP. Please try again.',
+        });
+      }
+
+      console.log('[Auth] OTP verified successfully for:', cleanPhone);
+      return res.json({
+        success: true,
+        message: 'OTP sent to your registered mobile number',
+        requestId: data.request_id,
+      });
+    } catch (apiError) {
+      console.error('[Auth] MSG91 API request failed:', apiError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP. Please check your phone number and try again.',
+      });
+    }
   } catch (err) {
     console.error('[Auth] SendOtp error:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    return res.status(500).json({ success: false, message: err.message || 'Failed to send OTP' });
   }
 };
 
 const verifyOtp = async (req, res) => {
   try {
-    const { aadhaarNumber, otp, name, phone, course, college } = req.body;
+    const {
+      aadhaarNumber,
+      otp,
+      phone,
+    } = req.body;
+
     if (!phone || !otp) {
       return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
     }
-    const key = `${aadhaarNumber || ''}:${phone}`;
-    const stored = otpStore.get(key);
-    if (!stored || stored.expiresAt < Date.now() || stored.otp !== otp) {
-      return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
-    }
-    otpStore.delete(key);
 
-    let user = await User.findOne({ phone });
-    if (!user && aadhaarNumber) {
-      user = await User.findOne({ aadhaarNumber });
+    // Validate phone format (10 digits)
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
+      return res.status(400).json({ success: false, message: 'Phone must be 10 digits' });
     }
 
-    if (!user) {
-      const passwordHash = await hashPassword(otp);
-      const studentId = await User.generateStudentId();
-      const email = `${phone.replace(/\D/g, '')}@svga.local`;
-      user = await User.create({
-        name: name || `Student ${phone}`,
-        email,
-        passwordHash,
-        phone,
-        aadhaarNumber: aadhaarNumber || '',
-        course: course || 'Other',
-        college: college || '',
-        studentId,
-        membershipStatus: 'NOT_PAID',
-        paymentStatus: 'PENDING',
-        role: 'student',
+    const cleanOtp = otp.replace(/\D/g, '');
+    const msg91ApiKey = process.env.MSG91_API_KEY;
+    const countryCode = process.env.MSG91_COUNTRY_CODE || '91';
+
+    // DEMO MODE: Check in-memory OTP store (4-digit OTP)
+    if (!msg91ApiKey) {
+      const storedOtpData = global.otpStore.get(cleanPhone);
+
+      if (!storedOtpData) {
+        return res.status(401).json({
+          success: false,
+          message: 'No OTP sent to this number. Please request a new OTP.',
+        });
+      }
+
+      if (Date.now() > storedOtpData.expiresAt) {
+        global.otpStore.delete(cleanPhone);
+        return res.status(401).json({
+          success: false,
+          message: 'OTP has expired. Please request a new OTP.',
+        });
+      }
+
+      if (storedOtpData.attempts >= 3) {
+        global.otpStore.delete(cleanPhone);
+        return res.status(401).json({
+          success: false,
+          message: 'Too many failed attempts. Please request a new OTP.',
+        });
+      }
+
+      if (cleanOtp !== storedOtpData.otp) {
+        storedOtpData.attempts += 1;
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid OTP. Please try again.',
+        });
+      }
+
+      // OTP is valid, clean up
+      global.otpStore.delete(cleanPhone);
+      console.log(`[Auth] OTP verified successfully for +${countryCode}${cleanPhone}`);
+
+      // Find or create user
+      let user = await User.findOne({ phone: cleanPhone });
+      let isNewUser = false;
+
+      if (!user && aadhaarNumber) {
+        user = await User.findOne({ aadhaarNumber });
+      }
+
+      if (!user) {
+        // Create new temporary user with minimal data
+        const studentId = await User.generateStudentId();
+        isNewUser = true;
+
+        user = await User.create({
+          phone: cleanPhone,
+          aadhaarNumber: aadhaarNumber || '',
+          studentId,
+          role: 'student',
+          profileCompleted: false,
+          paymentStatus: 'PENDING',
+          membershipStatus: 'NOT_PAID',
+          passwordHash: 'otp_login',
+        });
+
+        console.log(`[Auth] New temporary user created: phone=${cleanPhone} (ID: ${user.studentId})`);
+      }
+
+      const token = generateToken(String(user._id), user.role);
+      return res.json({
+        success: true,
+        token,
+        user: user.toPublic(),
+        isNewUser,
+        profileCompleted: user.profileCompleted,
+        paymentStatus: user.paymentStatus,
+        message: 'OTP verified successfully',
       });
     }
 
-    const token = generateToken(String(user._id), user.role);
-    return res.json({ success: true, token, user: user.toPublic() });
-  } catch (err) {
-    console.error('[Auth] VerifyOtp error:', err);
-    return res.status(500).json({ success: false, message: err.message });
+    // PRODUCTION MODE: Use MSG91 API (4-digit OTP)
+    if (cleanOtp.length !== 4) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP must be 4 digits',
+      });
+    }
+
+    console.log('[Auth] Verifying OTP:', cleanOtp, 'for phone:', cleanPhone);
+
+    const msg91VerifyUrl = `https://api.msg91.com/api/v5/otp/verify?authkey=${process.env.MSG91_API_KEY}&mobile=91${cleanPhone}&otp=${cleanOtp}`;
+
+    try {
+      const response = await fetch(msg91VerifyUrl, { method: 'GET' });
+      const data = await response.json();
+
+      console.log('MSG91 URL:', msg91VerifyUrl);
+      console.log('MSG91 Status:', response.status);
+      console.log('MSG91 Data:', data);
+
+      // Treat both "success" and "already verified" as valid verification
+      const isVerified = response.ok && (data.type === 'success' || data.message === 'Mobile no. already verified');
+
+      if (!isVerified) {
+        console.error('[Auth] MSG91 verification failed:', data);
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired OTP. Please try again.',
+        });
+      }
+
+      console.log(`[Auth] OTP verified successfully for +${countryCode}${cleanPhone}`);
+
+      // Find or create user
+      let user = await User.findOne({ phone: cleanPhone });
+      let isNewUser = false;
+
+      if (!user && aadhaarNumber) {
+        user = await User.findOne({ aadhaarNumber });
+      }
+
+      if (!user) {
+        // Create new temporary user with minimal data
+        const studentId = await User.generateStudentId();
+        isNewUser = true;
+
+        user = await User.create({
+          phone: cleanPhone,
+          aadhaarNumber: aadhaarNumber || '',
+          studentId,
+          role: 'student',
+          profileCompleted: false,
+          paymentStatus: 'PENDING',
+          membershipStatus: 'NOT_PAID',
+          passwordHash: 'otp_login',
+        });
+
+        console.log(`[Auth] New temporary user created: phone=${cleanPhone} (ID: ${user.studentId})`);
+      }
+
+      const token = generateToken(String(user._id), user.role);
+      return res.json({
+        success: true,
+        token,
+        user: user.toPublic(),
+        isNewUser,
+        profileCompleted: user.profileCompleted,
+        paymentStatus: user.paymentStatus,
+        message: 'OTP verified successfully',
+      });
+    } catch (apiError) {
+      console.error('[Auth] MSG91 verification request failed:', apiError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to verify OTP. Please try again.',
+      });
+    }
+  } catch (error) {
+    console.error('VERIFY OTP ERROR:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 

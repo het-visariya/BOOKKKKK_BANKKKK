@@ -301,8 +301,8 @@ export function StudentProfilePage() {
         >
           <div className="flex items-center gap-3">
             <img
-              src="/assets/svga-logo.png"
-              alt="SVGA"
+              src={LOGO_SRC}
+              alt="SVGA Book Bank"
               className="h-12 w-12 rounded-full object-cover border-2 border-white/40 flex-shrink-0 shadow-md"
             />
             <div>

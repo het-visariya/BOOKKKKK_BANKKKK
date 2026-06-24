@@ -1,4 +1,4 @@
-import { BrandingFooter, SVGALogo } from "@/components/layout/AppLayout";
+import { BrandingFooter, LOGO_SRC, SVGALogo } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { useAdminAuth, useStudentAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -189,8 +189,8 @@ export function LandingPage() {
           >
             <div className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 rounded-xl shrink-0 shadow-warm p-1 animate-float">
               <img
-                src="/assets/svga-logo.png"
-                alt="SVGA Logo"
+                src={LOGO_SRC}
+                alt="SVGA Book Bank"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -503,8 +503,8 @@ export function LandingPage() {
             <motion.div variants={fadeUp} className="flex justify-center">
               <div className="h-16 w-16 rounded-xl shrink-0 shadow-warm p-1">
                 <img
-                  src="/assets/svga-logo.png"
-                  alt="SVGA Logo"
+                  src={LOGO_SRC}
+                  alt="SVGA Book Bank"
                   className="w-full h-full object-contain"
                 />
               </div>

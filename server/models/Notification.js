@@ -2,15 +2,16 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    kind: { type: String, trim: true, default: 'general' },
-    title: { type: String, trim: true, required: true },
-    message: { type: String, trim: true, required: true },
+    studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    title: { type: String, required: true },
+    message: { type: String, required: true },
     actionUrl: { type: String, default: null },
-    isRead: { type: Boolean, default: false },
-    timestamp: { type: Date, default: Date.now },
+    type: { type: String, default: 'info' },
+    isRead: { type: Boolean, default: false, index: true },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
+
+notificationSchema.index({ studentId: 1, isRead: 1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

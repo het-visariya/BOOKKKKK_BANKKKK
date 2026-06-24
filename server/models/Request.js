@@ -22,6 +22,10 @@ const requestedBookSchema = new mongoose.Schema(
     publisher: String,
     note: String,
     decision: { type: String, default: null }, // Track per-book decision for manual requests
+    isPurchased: { type: Boolean, default: false }, // Track procurement completion
+    purchasedAt: Date, // Timestamp when included in procurement batch
+    purchaseBatchId: String, // Reference to PurchaseBatch
+    purchasePdfUrl: String, // URL/path to generated PDF
   },
   { _id: false }
 );

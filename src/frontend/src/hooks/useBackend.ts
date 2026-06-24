@@ -109,6 +109,7 @@ function canisterRequestToBookRequest(r: CanisterBookRequest): BookRequest {
       author: rb.author,
       edition: rb.edition,
       publisher: rb.publisher,
+      note: (rb as any).note,
       imageUrl: rb.imageUrl,
       decision: String((rb as any).decision ?? ""),
     })),
@@ -458,53 +459,96 @@ export function getActorPromise(): Promise<never> {
 
 /** Step 1: Send OTP to Aadhaar-linked phone */
 export function useSendOtp() {
-  const { actor } = useAnonActor();
   return useMutation({
     mutationFn: async ({
       aadhaarNumber,
       phone,
-    }: { aadhaarNumber: string; phone: string }) => {
-      if (!actor) throw new Error("Canister not ready");
-      const result = await actor.sendOtp(aadhaarNumber, phone);
-      if (result.__kind__ === "err") throw new Error(result.err);
-      // Demo mode: OTP is returned for screen display
-      return { otp: result.ok.otp, demo: result.ok.demo };
+      type = "sms",
+    }: {
+      aadhaarNumber?: string;
+      phone?: string;
+      type?: "sms";
+    }) => {
+      const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+      
+      const response = await fetch(`${baseUrl}/api/auth/otp/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aadhaarNumber, phone }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to send OTP");
+      }
+
+      const data = await response.json();
+      return { success: data.success, message: data.message };
     },
   });
 }
 
-/** Step 2a: Verify OTP and login existing user OR complete new user registration */
+/** Verify OTP and login */
 export function useVerifyOtpAndLogin() {
   const qc = useQueryClient();
-  const { actor } = useAnonActor();
   return useMutation({
     mutationFn: async ({
       aadhaarNumber,
+      phone,
       otp,
-      name = "",
-      phone = "",
-      course = "",
-      college = "",
+      type = "sms",
     }: {
       aadhaarNumber: string;
+      phone: string;
       otp: string;
-      name?: string;
-      phone?: string;
-      course?: string;
-      college?: string;
+      type?: "sms";
     }) => {
-      if (!actor) throw new Error("Canister not ready");
-      const result = await actor.verifyOtpAndLogin(
-        aadhaarNumber,
-        otp,
-        name,
-        phone,
-        course,
-        college,
-      );
-      if (result.__kind__ === "err") throw new Error(result.err);
-      const user = userPublicToUser(result.ok.user);
-      return { token: result.ok.token, user, userId: user._id };
+      const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+      
+      const response = await fetch(`${baseUrl}/api/auth/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          aadhaarNumber,
+          phone,
+          otp,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "OTP verification failed");
+      }
+
+      const data = await response.json();
+      const user = {
+        _id: data.user?.id || data.user?._id,
+        id: data.user?.id || data.user?._id,
+        name: data.user?.name || "",
+        firstName: data.user?.firstName || "",
+        fatherName: data.user?.fatherName || "",
+        grandfatherName: data.user?.grandfatherName || "",
+        surname: data.user?.surname || "",
+        email: data.user?.email || "",
+        phone: data.user?.phone || "",
+        aadhaarNumber: data.user?.aadhaarNumber || "",
+        course: data.user?.course || "",
+        college: data.user?.college || "",
+        studentId: data.user?.studentId || "",
+        membershipStatus: data.user?.membershipStatus || "NOT_PAID",
+        paymentStatus: data.user?.paymentStatus || "PENDING",
+        profileCompleted: data.user?.profileCompleted ?? data.profileCompleted ?? false,
+        photoUploaded: data.user?.photoUploaded ?? false,
+        role: data.user?.role || "student",
+      };
+      return { 
+        token: data.token, 
+        user, 
+        userId: data.user?.id || data.user?._id,
+        isNewUser: data.isNewUser ?? false,
+        profileCompleted: data.profileCompleted ?? false,
+        paymentStatus: data.paymentStatus || "PENDING",
+      };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["currentUser"] }),
   });
@@ -1801,15 +1845,14 @@ export function useCreateBookRequest() {
       const token = getStudentToken();
       if (!token) throw new Error("Not authenticated — please log in again");
       if (!actor) throw new Error("Canister not ready");
-      const reqBooks: CanisterRequestedBookPublic[] = requestedBooks.map(
-        (rb) => ({
-          title: rb.title,
-          author: rb.author ?? "",
-          edition: rb.edition ?? "",
-          publisher: rb.publisher ?? "",
-          imageUrl: rb.imageUrl ?? "",
-        }),
-      );
+      const reqBooks = requestedBooks.map((rb) => ({
+        title: rb.title,
+        author: rb.author ?? "",
+        edition: rb.edition ?? "",
+        publisher: rb.publisher ?? "",
+        imageUrl: rb.imageUrl ?? "",
+        note: (rb as any).note ?? undefined,
+      })) as unknown as CanisterRequestedBookPublic[];
       const result = await actor.createBookRequest(
         token,
         selectedBookIds,
@@ -2755,6 +2798,9 @@ export interface ManualBookToPurchase {
   requestNumber: string;
   manualIndex: number;
   procurement: ProcurementRequest;
+  isPurchased: boolean;
+  purchaseBatchId?: string;
+  purchasePdfUrl?: string;
   challanId?: string;
 }
 
@@ -2946,5 +2992,159 @@ export function useUpdateManualBookStatus() {
       qc.invalidateQueries({ queryKey: ["adminPendingRequests"] });
       qc.invalidateQueries({ queryKey: ["requestDetails", requestId] });
     },
+  });
+}
+
+// ─── Generate Procurement PDF ────────────────────────────────────────────────
+
+interface GenerateProcurementPdfRequest {
+  selectedBooks: Array<{
+    requestId: string;
+    bookIndex: number;
+    bookTitle: string;
+    author?: string;
+    publisher?: string;
+    edition?: string;
+    studentName: string;
+    studentId: string;
+  }>;
+}
+
+interface GenerateProcurementPdfResponse {
+  success: boolean;
+  data: {
+    batchId: string;
+    pdfUrl: string;
+    pdfFileName: string;
+    totalBooks: number;
+    generatedAt: string;
+  };
+}
+
+export function useGenerateProcurementPdf() {
+  const qc = useQueryClient();
+  const adminToken = getAdminToken();
+
+  return useMutation({
+    mutationFn: async (payload: GenerateProcurementPdfRequest) => {
+      if (!adminToken) {
+        throw new Error("Admin authentication required");
+      }
+
+      const response = await fetch("/api/procurement/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to generate PDF");
+      }
+
+      return (await response.json()) as GenerateProcurementPdfResponse;
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries to refresh UI
+      qc.invalidateQueries({ queryKey: ["manualBooksToPurchase"] });
+      qc.invalidateQueries({ queryKey: ["procurementHistory"] });
+    },
+  });
+}
+
+// ─── Get Procurement History ──────────────────────────────────────────────────
+
+interface ProcurementBatchHistory {
+  purchaseBatchId: string;
+  generatedDate: string;
+  generatedBy: string;
+  totalBooks: number;
+  pdfFileName: string;
+}
+
+interface ProcurementHistoryResponse {
+  success: boolean;
+  data: {
+    batches: ProcurementBatchHistory[];
+    total: number;
+    limit: number;
+    skip: number;
+    hasMore: boolean;
+  };
+}
+
+export function useProcurementHistory(limit = 50, skip = 0) {
+  const adminToken = getAdminToken();
+
+  return useQuery({
+    queryKey: ["procurementHistory", { limit, skip }],
+    queryFn: async () => {
+      if (!adminToken) return { batches: [], total: 0 };
+
+      const response = await fetch(
+        `/api/procurement/history?limit=${limit}&skip=${skip}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch procurement history");
+      }
+
+      const data = (await response.json()) as ProcurementHistoryResponse;
+      return data.data;
+    },
+    enabled: !!adminToken,
+  });
+}
+
+// ─── Get Pending Books for Purchase ───────────────────────────────────────────
+
+interface PendingBook {
+  requestId: string;
+  bookIndex: number;
+  bookTitle: string;
+  author: string;
+  publisher: string;
+  edition: string;
+  studentName: string;
+  studentId: string;
+  studentEmail: string;
+}
+
+interface PendingBooksResponse {
+  success: boolean;
+  data: PendingBook[];
+  count: number;
+}
+
+export function usePendingBooksForPurchase() {
+  const adminToken = getAdminToken();
+
+  return useQuery({
+    queryKey: ["pendingBooksForPurchase"],
+    queryFn: async () => {
+      if (!adminToken) return [];
+
+      const response = await fetch("/api/procurement/pending", {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch pending books");
+      }
+
+      const data = (await response.json()) as PendingBooksResponse;
+      return data.data;
+    },
+    enabled: !!adminToken,
   });
 }

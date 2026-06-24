@@ -130,6 +130,9 @@ const getManualBooksToPurchase = async (req, res) => {
               edition: String(book.edition ?? ''),
               publisher: String(book.publisher ?? ''),
               status,
+              isPurchased: Boolean(book.isPurchased),
+              purchaseBatchId: String(book.purchaseBatchId ?? ''),
+              purchasePdfUrl: String(book.purchasePdfUrl ?? ''),
             },
           });
         });

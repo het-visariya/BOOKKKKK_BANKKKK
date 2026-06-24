@@ -11,9 +11,13 @@ const issuedBookSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    name: { type: String, trim: true },
+    firstName: { type: String, trim: true },
+    fatherName: { type: String, trim: true },
+    grandfatherName: { type: String, trim: true },
+    surname: { type: String, trim: true },
+    email: { type: String, unique: true, sparse: true, lowercase: true, trim: true },
+    passwordHash: { type: String, default: 'otp_login' },
     phone: { type: String, trim: true },
     aadhaarNumber: { type: String, trim: true, sparse: true },
     course: {
@@ -21,6 +25,7 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
     college: { type: String, trim: true },
+    village: { type: String, trim: true },
     profilePhoto: { type: String, default: null },
     studentId: { type: String, unique: true, sparse: true },
     membershipStatus: {
@@ -34,6 +39,14 @@ const userSchema = new mongoose.Schema(
       default: 'PENDING',
     },
     paymentId: { type: String },
+    profileCompleted: {
+      type: Boolean,
+      default: false,
+    },
+    photoUploaded: {
+      type: Boolean,
+      default: false,
+    },
     role: {
       type: String,
       enum: ['student', 'admin'],
@@ -47,7 +60,8 @@ const userSchema = new mongoose.Schema(
 userSchema.statics.generateStudentId = async function () {
   const count = await this.countDocuments({ role: 'student' });
   const num = count + 1;
-  return 'SVGA' + String(num).padStart(3, '0');
+  // Use S00001-style student IDs
+  return 'S' + String(num).padStart(5, '0');
 };
 
 userSchema.methods.toPublic = function () {

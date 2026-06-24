@@ -16,7 +16,9 @@ import {
   Menu,
   User,
   X,
+  Bell,
 } from "lucide-react";
+import { useGetMyNotifications, useMarkNotificationRead } from "@/hooks/useBackend";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -50,6 +52,10 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data: notifications } = useGetMyNotifications();
+  const markRead = useMarkNotificationRead();
+  const unreadCount = (notifications ?? []).filter((n) => !n.isRead).length;
 
   const handleLogout = () => {
     logout();
@@ -100,6 +106,22 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-2">
+              {/* Notification bell */}
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 text-white/80 hover:text-white hover:bg-white/10"
+                  onClick={() => setDrawerOpen((v) => !v)}
+                  aria-label="Notifications"
+                  data-ocid="student.notifications_button"
+                >
+                  <Bell className="h-5 w-5" />
+                </Button>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-destructive text-white text-[10px] font-medium">{unreadCount}</span>
+                )}
+              </div>
               {/* Mobile hamburger */}
               <Button
                 variant="ghost"
@@ -191,6 +213,89 @@ export function StudentLayout({ children }: { children: React.ReactNode }) {
           )}
         </AnimatePresence>
       </header>
+
+        {/* Notification drawer */}
+        <AnimatePresence>
+          {drawerOpen && (
+            <div className="fixed inset-0 z-50 pointer-events-auto">
+              <div
+                className="absolute inset-0 bg-black/40"
+                onClick={() => setDrawerOpen(false)}
+              />
+              <motion.aside
+                initial={{ x: 320 }}
+                animate={{ x: 0 }}
+                exit={{ x: 320 }}
+                transition={{ duration: 0.2 }}
+                className="absolute right-0 top-0 h-full w-80 bg-card border-l border-border shadow-elevated p-4 overflow-auto"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold">Notifications</h3>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerOpen(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {(notifications ?? []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No notifications</p>
+                  ) : (
+                    (notifications ?? []).map((n) => (
+                      <div
+                        key={n.id}
+                        className={`p-3 rounded-md border ${n.isRead ? 'bg-card' : 'bg-secondary/30 border-border'} cursor-pointer`}
+                        onClick={async () => {
+                          try {
+                            if (!n.isRead) await markRead.mutateAsync(n.id);
+                          } catch {}
+                          setDrawerOpen(false);
+                          try {
+                            if (n.actionUrl) {
+                              if (n.actionUrl.startsWith('http')) {
+                                window.location.href = n.actionUrl;
+                              } else {
+                                navigate({ to: n.actionUrl });
+                              }
+                            } else {
+                              navigate({ to: '/student/requests' });
+                            }
+                          } catch (e) {
+                            // swallow navigation errors
+                          }
+                        }}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="min-w-0">
+                            <div className="font-medium text-sm truncate">{n.title}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{n.message}</div>
+                            <div className="text-[11px] text-muted-foreground mt-2">{new Date(n.timestamp).toLocaleString()}</div>
+                          </div>
+                          {!n.isRead && (
+                            <button
+                              type="button"
+                              onClick={async (ev) => {
+                                ev.stopPropagation();
+                                try {
+                                  await markRead.mutateAsync(n.id);
+                                } catch {}
+                              }}
+                              className="ml-2 text-xs text-primary"
+                            >
+                              Mark read
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.aside>
+            </div>
+          )}
+        </AnimatePresence>
 
       <AnimatePresence mode="wait">
         <motion.main

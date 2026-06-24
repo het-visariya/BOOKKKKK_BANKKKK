@@ -180,8 +180,10 @@ function BookCard({
             )}
           </div>
         )}
-        {status === "Rejected" && reason && (
-          <p className="mt-1 text-xs text-red-600">Reason: {reason}</p>
+        {reason && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Note: {reason}
+          </p>
         )}
       </div>
       <span
@@ -222,6 +224,43 @@ function BookRowById({
       dataOcid={`challan.selected_book.${index + 1}`}
     />
   );
+}
+
+function normalizeManualDecision(raw?: string | null) {
+  const status = String(raw ?? "").trim().toLowerCase();
+  switch (status) {
+    case "requested":
+    case "pending":
+      return "Pending";
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "reserved":
+    case "acceptreservation":
+    case "accept_reservation":
+      return "Reserved";
+    case "ordered":
+      return "Ordered";
+    case "procured":
+      return "Procured";
+    case "arrived":
+    case "reached office":
+    case "reachedoffice":
+      return "Arrived";
+    case "readyforcollection":
+    case "ready_for_collection":
+      return "ReadyForCollection";
+    case "issued":
+    case "collected":
+      return "Issued";
+    case "returned":
+      return "Returned";
+    case "specialorder":
+      return "SpecialOrder";
+    default:
+      return String(raw ?? "Pending");
+  }
 }
 
 function QrSection({
@@ -323,17 +362,58 @@ function BooksGroupedByStatus({
   requestedBooks: RequestedBook[];
   reservations: Reservation[];
 }) {
-  const approved = decisions.filter((d) => d.decision === "Approved");
-  const rejected = decisions.filter((d) => d.decision === "Rejected");
-  const reserved = decisions.filter((d) => d.decision === "Reserved");
-  const special = decisions.filter(
-    (d) => d.decision === "SpecialOrder" || d.decision === "Pending",
+  const libraryDecisions = decisions.filter(
+    (d) => d.inventoryId && String(d.inventoryId).trim() !== "",
+  );
+  const manualDecisions = decisions.filter(
+    (d) => !d.inventoryId || String(d.bookId).startsWith("manual_"),
+  );
+
+  const approved = libraryDecisions.filter((d) => d.decision === "Approved");
+  const rejected = libraryDecisions.filter((d) => d.decision === "Rejected");
+  const reserved = libraryDecisions.filter((d) => d.decision === "Reserved");
+  const pendingLibrary = libraryDecisions.filter((d) => d.decision === "Pending");
+
+  const specialOrder = manualDecisions.filter(
+    (d) => d.decision === "SpecialOrder",
+  );
+  const approvedManual = manualDecisions.filter((d) => d.decision === "Approved");
+  const ordered = manualDecisions.filter((d) => d.decision === "Ordered");
+  const procured = manualDecisions.filter((d) => d.decision === "Procured");
+  const readyForCollection = manualDecisions.filter(
+    (d) => d.decision === "ReadyForCollection",
+  );
+  const issued = manualDecisions.filter((d) => d.decision === "Issued");
+  const returned = manualDecisions.filter((d) => d.decision === "Returned");
+  const rejectedManual = manualDecisions.filter((d) => d.decision === "Rejected");
+  const pendingManual = requestedBooks
+    .filter(
+      (b) =>
+        !manualDecisions.some(
+          (d) =>
+            String(d.bookName ?? "").toLowerCase().trim() ===
+            b.title.toLowerCase().trim(),
+        ),
+    )
+    .map((b, i) => ({
+      bookId: `manual_pending_${i}`,
+      bookName: b.title,
+      bookNumber: String(i + 1),
+      inventoryId: "",
+      decision: "Pending",
+      reason: b.note,
+      expectedReturnDate: undefined,
+      currentHolder: undefined,
+      procurementCreated: false,
+    } as import("@/types").BookDecision));
+  const pendingManualDecisions = manualDecisions.filter(
+    (d) => d.decision === "Pending",
   );
 
   function renderGroup(
     title: string,
     items: import("@/types").BookDecision[],
-    status: "Approved" | "Rejected" | "Reserved" | "Pending" | "SpecialOrder",
+    status: string,
     icon: React.ReactNode,
     ocidPrefix: string,
   ) {
@@ -353,7 +433,19 @@ function BooksGroupedByStatus({
               key={`${d.bookId}-${i}`}
               book={{ title: d.bookName, bookId: d.bookId }}
               index={i}
-              status={status}
+              status={
+                status as
+                  | "Approved"
+                  | "Rejected"
+                  | "Reserved"
+                  | "Pending"
+                  | "SpecialOrder"
+                  | "Ordered"
+                  | "Procured"
+                  | "ReadyForCollection"
+                  | "Issued"
+                  | "Returned"
+              }
               bookNumber={d.bookNumber}
               reason={d.reason}
               expectedReturnDate={d.expectedReturnDate}
@@ -369,34 +461,98 @@ function BooksGroupedByStatus({
   return (
     <>
       {renderGroup(
-        "Approved Books ✅",
+        "Library - Approved",
         approved,
         "Approved",
         <BookOpen className="h-4 w-4 text-emerald-600" />,
         "approved_book",
       )}
       {renderGroup(
-        "Rejected Books ❌",
-        rejected,
-        "Rejected",
-        <BookOpen className="h-4 w-4 text-red-500" />,
-        "rejected_book",
-      )}
-      {renderGroup(
-        "Reserved Books ⏳",
+        "Library - Reserved",
         reserved,
         "Reserved",
         <Clock className="h-4 w-4 text-amber-500" />,
         "reserved_book",
       )}
       {renderGroup(
-        "Special Requests 📚",
-        special,
-        "SpecialOrder",
-        <Package className="h-4 w-4 text-purple-500" />,
-        "special_book",
+        "Library - Pending",
+        pendingLibrary,
+        "Pending",
+        <BookOpen className="h-4 w-4 text-muted-foreground" />,
+        "pending_book",
       )}
-      {/* Reservation waiting-list entries for this request */}
+      {renderGroup(
+        "Library - Rejected",
+        rejected,
+        "Rejected",
+        <BookOpen className="h-4 w-4 text-red-500" />,
+        "rejected_book",
+      )}
+
+      {renderGroup(
+        "Special Requests - Pending",
+        [...pendingManual, ...pendingManualDecisions],
+        "Pending",
+        <Package className="h-4 w-4 text-purple-500" />,
+        "manual_pending",
+      )}
+      {renderGroup(
+        "Special Requests - Approved",
+        approvedManual,
+        "Approved",
+        <Package className="h-4 w-4 text-emerald-600" />,
+        "manual_approved",
+      )}
+      {renderGroup(
+        "Special Requests - Requested",
+        specialOrder,
+        "SpecialOrder",
+        <Package className="h-4 w-4 text-violet-600" />,
+        "manual_special_order",
+      )}
+      {renderGroup(
+        "Special Requests - Ordered",
+        ordered,
+        "Ordered",
+        <Package className="h-4 w-4 text-blue-600" />,
+        "manual_ordered",
+      )}
+      {renderGroup(
+        "Special Requests - Procured",
+        procured,
+        "Procured",
+        <Package className="h-4 w-4 text-teal-700" />,
+        "manual_procured",
+      )}
+      {renderGroup(
+        "Special Requests - Ready for Collection",
+        readyForCollection,
+        "ReadyForCollection",
+        <Package className="h-4 w-4 text-emerald-700" />,
+        "manual_ready",
+      )}
+      {renderGroup(
+        "Special Requests - Issued",
+        issued,
+        "Issued",
+        <Package className="h-4 w-4 text-green-700" />,
+        "manual_issued",
+      )}
+      {renderGroup(
+        "Special Requests - Returned",
+        returned,
+        "Returned",
+        <Package className="h-4 w-4 text-muted-foreground" />,
+        "manual_returned",
+      )}
+      {renderGroup(
+        "Special Requests - Rejected",
+        rejectedManual,
+        "Rejected",
+        <Package className="h-4 w-4 text-red-500" />,
+        "manual_rejected",
+      )}
+
       {reservations.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">
@@ -411,34 +567,6 @@ function BooksGroupedByStatus({
           <div className="space-y-2">
             {reservations.map((res, i) => (
               <ReservationCard key={res.id} reservation={res} index={i} />
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Show raw requested books (manual) if not already covered by decisions */}
-      {requestedBooks.length > 0 && special.length === 0 && (
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Package className="h-4 w-4 text-amber-600" />
-            <p className="text-sm font-semibold text-foreground">
-              Special Book Requests 📚
-            </p>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {requestedBooks.length} request(s)
-            </span>
-          </div>
-          <div className="space-y-2">
-            {requestedBooks.map((b, i) => (
-              <BookCard
-                key={`${b.title}-${i}`}
-                book={{ title: b.title }}
-                index={i}
-                status="Pending"
-                author={b.author}
-                edition={b.edition}
-                publisher={b.publisher}
-                dataOcid={`challan.manual_book.${i + 1}`}
-              />
             ))}
           </div>
         </div>
@@ -681,10 +809,21 @@ function ChallanContent({
                       publisher: b.publisher,
                     }}
                     index={i}
-                    status="Pending"
+                    status={normalizeManualDecision(b.decision) as
+                      | "Approved"
+                      | "Rejected"
+                      | "Reserved"
+                      | "Pending"
+                      | "SpecialOrder"
+                      | "Ordered"
+                      | "Procured"
+                      | "ReadyForCollection"
+                      | "Issued"
+                      | "Returned"}
                     author={b.author}
                     edition={b.edition}
                     publisher={b.publisher}
+                    reason={b.note}
                     dataOcid={`challan.manual_book.${i + 1}`}
                   />
                 ))}
@@ -875,7 +1014,9 @@ export function ChallanPage() {
           author: rb.author,
           edition: rb.edition,
           publisher: rb.publisher,
+          note: (rb as any).note,
           imageUrl: rb.imageUrl,
+          decision: String((rb as any).decision ?? ""),
         })),
         bookDecisions: r.bookDecisions ?? [],
         specialRequests: r.specialRequests ?? [],

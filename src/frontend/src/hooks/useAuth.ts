@@ -37,6 +37,8 @@ export function userPublicToUser(u: UserPublic): User {
     membershipStatus: membershipStr === "PAID" ? "PAID" : "NOT_PAID",
     paymentStatus:
       (u.paymentStatus as "SUCCESS" | "PENDING" | "FAILED") ?? "PENDING",
+    profileCompleted: (u as unknown as { profileCompleted?: boolean }).profileCompleted ?? false,
+    photoUploaded: (u as unknown as { photoUploaded?: boolean }).photoUploaded ?? false,
     role: "student",
     profilePhoto: u.profileImageUrl || undefined,
     profileImageUrl: u.profileImageUrl || undefined,

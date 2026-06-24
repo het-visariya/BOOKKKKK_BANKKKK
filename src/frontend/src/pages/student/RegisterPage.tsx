@@ -491,7 +491,7 @@ export function RegisterPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="devansh@example.com"
+                    placeholder="Type in your email"
                     value={form.email}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, email: e.target.value.trim() }))
@@ -540,7 +540,7 @@ export function RegisterPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="middleName">
-                    Father's Name <span className="text-destructive">*</span>
+                    Father's Name / Husband's Name <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="middleName"

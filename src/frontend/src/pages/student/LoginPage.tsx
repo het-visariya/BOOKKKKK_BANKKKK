@@ -9,19 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { setAadhaarSession, useStudentAuth } from "@/hooks/useAuth";
-import {
-  useSendOtp,
-  useStudentSignupAndPay,
-  useVerifyOtpAndLogin,
-} from "@/hooks/useBackend";
+import { useSendOtp, useVerifyOtpAndLogin } from "@/hooks/useBackend";
 import { useNavigate } from "@tanstack/react-router";
 import {
   ChevronRight,
@@ -30,26 +19,10 @@ import {
   Loader2,
   Phone,
   Shield,
-  UserPlus,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
-const COURSES = [
-  "FYJC",
-  "SYJC",
-  "FY-Degree",
-  "SY-Degree",
-  "TY-Degree",
-  "MBBS",
-  "BDS",
-  "Engineering",
-  "Commerce",
-  "Arts",
-  "Science",
-  "Other",
-];
 
 type Step = "aadhaar" | "otp";
 
@@ -57,24 +30,17 @@ export function LoginPage() {
   const { isAuthenticated, membershipPaid } = useStudentAuth();
   const sendOtpMutation = useSendOtp();
   const verifyOtpMutation = useVerifyOtpAndLogin();
-  const signupMutation = useStudentSignupAndPay();
   const navigate = useNavigate();
 
   const [step, setStep] = useState<Step>("aadhaar");
+  const [showOtpSent, setShowOtpSent] = useState(false);
   const [aadhaar, setAadhaar] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [demoOtp, setDemoOtp] = useState<string | null>(null);
-  const [isNewUser, setIsNewUser] = useState(false);
-  const [name, setName] = useState("");
-  const [course, setCourse] = useState("");
-  const [college, setCollege] = useState("");
   const [errors, setErrors] = useState({
     aadhaar: "",
     phone: "",
     otp: "",
-    name: "",
-    course: "",
   });
 
   useEffect(() => {
@@ -83,102 +49,76 @@ export function LoginPage() {
     else navigate({ to: "/student/register" });
   }, [isAuthenticated, membershipPaid, navigate]);
 
-  const validateAadhaar = () => {
-    const errs = { aadhaar: "", phone: "", otp: "", name: "", course: "" };
-    if (!aadhaar.trim() || !/^\d{12}$/.test(aadhaar.replace(/[- ]/g, "")))
+  const validateAadhaarAndPhone = () => {
+    const errs = { aadhaar: "", phone: "", otp: "" };
+    if (!aadhaar.trim() || !/^\d{12}$/.test(aadhaar.replace(/[- ]/g, ""))) {
       errs.aadhaar = "Enter a valid 12-digit Aadhaar number";
-    if (!phone.trim() || !/^\d{10}$/.test(phone.replace(/[- ]/g, "")))
+    }
+    if (!phone.trim() || !/^\d{10}$/.test(phone.replace(/[- ]/g, ""))) {
       errs.phone = "Enter a valid 10-digit mobile number";
+    }
     setErrors(errs);
     return !errs.aadhaar && !errs.phone;
   };
 
-  const handleSendOtp = async () => {
-    if (!validateAadhaar()) return;
-    try {
-      const cleanAadhaar = aadhaar.replace(/[- ]/g, "");
-      const cleanPhone = phone.replace(/[- ]/g, "");
-      const result = await sendOtpMutation.mutateAsync({
-        aadhaarNumber: cleanAadhaar,
-        phone: cleanPhone,
-      });
-      setStep("otp");
-      if (result.demo) {
-        setDemoOtp(result.otp);
-        toast.info(`Demo OTP: ${result.otp}`, { duration: 30000 });
-      } else {
-        toast.success("OTP sent to your registered mobile number");
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      if (
-        msg.toLowerCase().includes("not found") ||
-        msg.toLowerCase().includes("not registered")
-      ) {
-        setIsNewUser(true);
-        setStep("otp");
-        toast.info(
-          "New student detected — please complete your profile below.",
-        );
-      } else {
-        toast.error(msg || "Failed to send OTP");
-      }
-    }
-  };
-
-  const validateOtpStep = () => {
-    const errs = { aadhaar: "", phone: "", otp: "", name: "", course: "" };
-    if (!otp.trim() || otp.length < 4) errs.otp = "Enter the OTP";
-    if (isNewUser) {
-      if (!name.trim()) errs.name = "Enter your full name";
-      if (!course) errs.course = "Select your course";
+  const validateOtp = () => {
+    const errs = { ...errors };
+    if (!otp.trim() || otp.length !== 4) {
+      errs.otp = "Enter the 4-digit OTP";
+    } else {
+      errs.otp = "";
     }
     setErrors(errs);
-    return !errs.otp && !errs.name && !errs.course;
+    return !errs.otp;
+  };
+
+  const handleSendOtp = async () => {
+    if (!validateAadhaarAndPhone()) return;
+    try {
+      const cleanPhone = phone.replace(/[- ]/g, "");
+      const cleanAadhaar = aadhaar.replace(/[- ]/g, "");
+      await sendOtpMutation.mutateAsync({
+        aadhaarNumber: cleanAadhaar,
+        phone: cleanPhone,
+        type: "sms",
+      });
+      setShowOtpSent(true);
+      setStep("otp");
+      toast.success("✓ OTP sent to +91" + cleanPhone);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to send OTP";
+      toast.error(msg);
+    }
   };
 
   const handleVerifyOtp = async () => {
-    if (!validateOtpStep()) return;
-    const cleanAadhaar = aadhaar.replace(/[- ]/g, "");
-    const cleanPhone = phone.replace(/[- ]/g, "");
+    if (!validateOtp()) return;
     try {
-      if (isNewUser) {
-        const result = await signupMutation.mutateAsync({
-          aadhaarNumber: cleanAadhaar,
-          otp: otp.trim(),
-          name: name.trim(),
-          phone: cleanPhone,
-          course,
-          college: college.trim(),
-        });
-        setAadhaarSession(result.token, result.user);
-        toast.success(`Welcome to SVGA Book Bank, ${result.user.name}! 🎉`);
-        navigate({ to: "/student/dashboard" });
-      } else {
-        const result = await verifyOtpMutation.mutateAsync({
-          aadhaarNumber: cleanAadhaar,
-          otp: otp.trim(),
-          phone: cleanPhone,
-        });
-        setAadhaarSession(result.token, result.user);
-        toast.success(`Welcome back, ${result.user.name}!`);
-        if (result.user.membershipStatus === "PAID") {
+      const cleanPhone = phone.replace(/[- ]/g, "");
+      const cleanAadhaar = aadhaar.replace(/[- ]/g, "");
+      const result = await verifyOtpMutation.mutateAsync({
+        aadhaarNumber: cleanAadhaar,
+        phone: cleanPhone,
+        otp: otp.trim(),
+        type: "sms",
+      });
+      setAadhaarSession(result.token, result.user);
+      toast.success("✓ Login successful! Welcome to SVGA Book Bank 🎉");
+      setTimeout(() => {
+        // Redirect based on profile completion and payment status
+        if (result.user.profileCompleted && result.user.paymentStatus === "SUCCESS") {
           navigate({ to: "/student/dashboard" });
         } else {
           navigate({ to: "/student/register" });
         }
-      }
+      }, 500);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "OTP verification failed",
-      );
+      const msg = err instanceof Error ? err.message : "OTP verification failed";
+      toast.error(msg);
     }
   };
 
-  const isPending =
-    sendOtpMutation.isPending ||
-    verifyOtpMutation.isPending ||
-    signupMutation.isPending;
+  const isLoading = sendOtpMutation.isPending || verifyOtpMutation.isPending;
 
   return (
     <div className="min-h-screen flex flex-col overflow-hidden">
@@ -204,7 +144,7 @@ export function LoginPage() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-start justify-center px-4 py-10 relative z-10">
+      <main className="flex-1 flex items-center justify-center px-4 py-8 relative z-10">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <motion.div
@@ -217,39 +157,39 @@ export function LoginPage() {
                 <Shield className="h-8 w-8 text-primary" />
               </div>
             </motion.div>
-            <h1 className="text-2xl font-display font-bold text-foreground">
-              {isNewUser ? "Create Your Account" : "Student Login"}
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              Student Login
             </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-2">
               {step === "aadhaar"
-                ? "Enter your Aadhaar number to receive an OTP"
-                : isNewUser
-                  ? "Complete your profile and verify your OTP"
-                  : "Enter the OTP sent to your mobile"}
+                ? "Enter your Aadhaar & Mobile Number"
+                : "Enter the 4-digit OTP sent to your phone"}
             </p>
           </div>
 
           <AnimatePresence mode="wait">
-            {step === "aadhaar" ? (
+            {step === "aadhaar" && (
               <motion.div
                 key="aadhaar-step"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.25 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
               >
                 <Card className="border-border shadow-warm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base font-semibold">
-                      Aadhaar Verification
+                      Verification
                     </CardTitle>
                     <CardDescription>
-                      Secure login using your Aadhaar-linked mobile number
+                      Secure login using Aadhaar verification
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-5">
                     <div className="space-y-2">
-                      <Label htmlFor="aadhaar">Aadhaar Number</Label>
+                      <Label htmlFor="aadhaar" className="font-medium">
+                        Aadhaar Number *
+                      </Label>
                       <Input
                         id="aadhaar"
                         placeholder="1234 5678 9012"
@@ -257,26 +197,34 @@ export function LoginPage() {
                         maxLength={14}
                         onChange={(e) => {
                           setAadhaar(e.target.value.replace(/[^\d ]/g, ""));
-                          if (errors.aadhaar)
+                          if (errors.aadhaar) {
                             setErrors((er) => ({ ...er, aadhaar: "" }));
+                          }
                         }}
-                        onKeyDown={(e) => e.key === "Enter" && handleSendOtp()}
-                        data-ocid="student.login.aadhaar_input"
-                        className={errors.aadhaar ? "border-destructive" : ""}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !errors.phone && phone.trim()) {
+                            handleSendOtp();
+                          }
+                        }}
+                        disabled={isLoading}
+                        className={`text-lg ${
+                          errors.aadhaar ? "border-destructive" : ""
+                        }`}
+                        autoComplete="off"
                       />
                       {errors.aadhaar && (
-                        <p
-                          className="text-xs text-destructive"
-                          data-ocid="student.login.aadhaar_error"
-                        >
+                        <p className="text-xs text-destructive font-medium">
                           {errors.aadhaar}
                         </p>
                       )}
                     </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Mobile Number</Label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                      <Label htmlFor="phone" className="font-medium">
+                        Mobile Number *
+                      </Label>
+                      <div className="flex gap-0">
+                        <span className="inline-flex items-center px-4 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm font-medium">
                           +91
                         </span>
                         <Input
@@ -286,236 +234,149 @@ export function LoginPage() {
                           maxLength={10}
                           onChange={(e) => {
                             setPhone(e.target.value.replace(/\D/g, ""));
-                            if (errors.phone)
+                            if (errors.phone) {
                               setErrors((er) => ({ ...er, phone: "" }));
+                            }
                           }}
-                          onKeyDown={(e) =>
-                            e.key === "Enter" && handleSendOtp()
-                          }
-                          data-ocid="student.login.phone_input"
-                          className={`rounded-l-none ${
+                          onKeyDown={(e) => {
+                            if (
+                              e.key === "Enter" &&
+                              !errors.aadhaar &&
+                              !errors.phone
+                            ) {
+                              handleSendOtp();
+                            }
+                          }}
+                          disabled={isLoading}
+                          className={`rounded-l-none text-lg ${
                             errors.phone ? "border-destructive" : ""
                           }`}
+                          autoComplete="off"
                         />
                       </div>
                       {errors.phone && (
-                        <p
-                          className="text-xs text-destructive"
-                          data-ocid="student.login.phone_error"
-                        >
+                        <p className="text-xs text-destructive font-medium">
                           {errors.phone}
                         </p>
                       )}
                     </div>
+
                     <Button
-                      className="w-full"
+                      className="w-full h-11 text-base font-semibold"
                       onClick={handleSendOtp}
-                      disabled={isPending}
-                      data-ocid="student.login.send_otp_button"
+                      disabled={isLoading || !!errors.aadhaar || !!errors.phone}
                     >
-                      {sendOtpMutation.isPending ? (
+                      {isLoading ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
-                          Sending OTP…
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Sending OTP...
                         </>
                       ) : (
                         <>
-                          <Phone className="mr-2 h-4 w-4" /> Send OTP
+                          <Phone className="mr-2 h-5 w-5" />
+                          Send OTP
                         </>
                       )}
                     </Button>
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : (
+            )}
+
+            {step === "otp" && (
               <motion.div
                 key="otp-step"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
               >
                 <Card className="border-border shadow-warm">
                   <CardHeader className="pb-4">
                     <CardTitle className="text-base font-semibold">
-                      {isNewUser ? "Complete Registration" : "OTP Verification"}
+                      Verify OTP
                     </CardTitle>
                     <CardDescription>
-                      {isNewUser
-                        ? "Fill in your details and enter the OTP to create your account"
-                        : `OTP sent to mobile ending in …${phone.slice(-4)}`}
+                      Enter the 4-digit code sent to +91{phone}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    {demoOtp && (
+                  <CardContent className="space-y-5">
+                    {showOtpSent && (
                       <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-800"
-                        data-ocid="student.login.demo_otp_box"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800"
                       >
-                        <p className="font-semibold mb-1">
-                          ✅ OTP Sent (Demo Mode)
+                        <p className="font-semibold mb-1">📱 OTP Sent</p>
+                        <p>Check your SMS for the 4-digit verification code</p>
+                        <p className="text-xs text-blue-700 mt-2 opacity-75">
+                          (In demo mode, check browser console or backend logs)
                         </p>
-                        <p>
-                          Your verification code:{" "}
-                          <span className="font-mono font-bold text-emerald-900 text-lg tracking-[0.3em]">
-                            {demoOtp}
-                          </span>
-                        </p>
-                        <p className="text-xs text-emerald-700 mt-1">
-                          In production this would be sent via SMS.
-                        </p>
-                      </motion.div>
-                    )}
-
-                    {isNewUser && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        transition={{ duration: 0.3 }}
-                        className="space-y-4 pt-1"
-                      >
-                        <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-800 flex items-center gap-2">
-                          <UserPlus className="h-3.5 w-3.5 shrink-0" />
-                          New student detected — please complete your profile
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="reg-name">
-                            Full Name{" "}
-                            <span className="text-destructive">*</span>
-                          </Label>
-                          <Input
-                            id="reg-name"
-                            placeholder="Your full name"
-                            value={name}
-                            onChange={(e) => {
-                              setName(e.target.value);
-                              if (errors.name)
-                                setErrors((er) => ({ ...er, name: "" }));
-                            }}
-                            data-ocid="student.login.name_input"
-                            className={errors.name ? "border-destructive" : ""}
-                          />
-                          {errors.name && (
-                            <p className="text-xs text-destructive">
-                              {errors.name}
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="reg-course">
-                            Course <span className="text-destructive">*</span>
-                          </Label>
-                          <Select
-                            value={course}
-                            onValueChange={(v) => {
-                              setCourse(v);
-                              if (errors.course)
-                                setErrors((er) => ({ ...er, course: "" }));
-                            }}
-                          >
-                            <SelectTrigger
-                              id="reg-course"
-                              data-ocid="student.login.course_select"
-                              className={
-                                errors.course ? "border-destructive" : ""
-                              }
-                            >
-                              <SelectValue placeholder="Select your course…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COURSES.map((c) => (
-                                <SelectItem key={c} value={c}>
-                                  {c}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {errors.course && (
-                            <p className="text-xs text-destructive">
-                              {errors.course}
-                            </p>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="reg-college">College</Label>
-                          <Input
-                            id="reg-college"
-                            placeholder="Your college name (optional)"
-                            value={college}
-                            onChange={(e) => setCollege(e.target.value)}
-                            data-ocid="student.login.college_input"
-                          />
-                        </div>
                       </motion.div>
                     )}
 
                     <div className="space-y-2">
-                      <Label htmlFor="otp">Enter OTP</Label>
+                      <Label htmlFor="otp" className="font-medium">
+                        Enter OTP *
+                      </Label>
                       <Input
                         id="otp"
-                        placeholder="123456"
+                        placeholder="0000"
                         value={otp}
-                        maxLength={6}
+                        maxLength={4}
                         onChange={(e) => {
                           setOtp(e.target.value.replace(/\D/g, ""));
-                          if (errors.otp)
+                          if (errors.otp) {
                             setErrors((er) => ({ ...er, otp: "" }));
+                          }
                         }}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleVerifyOtp()
-                        }
-                        data-ocid="student.login.otp_input"
-                        className={`text-center tracking-[0.5em] font-mono text-lg ${
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && otp.length === 4) {
+                            handleVerifyOtp();
+                          }
+                        }}
+                        disabled={isLoading}
+                        className={`text-center text-2xl tracking-widest font-mono font-bold letter-spacing-lg ${
                           errors.otp ? "border-destructive" : ""
                         }`}
+                        autoComplete="off"
                       />
                       {errors.otp && (
-                        <p
-                          className="text-xs text-destructive"
-                          data-ocid="student.login.otp_error"
-                        >
+                        <p className="text-xs text-destructive font-medium">
                           {errors.otp}
                         </p>
                       )}
                     </div>
 
                     <Button
-                      className="w-full"
+                      className="w-full h-11 text-base font-semibold"
                       onClick={handleVerifyOtp}
-                      disabled={isPending}
-                      data-ocid="student.login.verify_otp_button"
+                      disabled={isLoading || otp.length !== 4}
                     >
-                      {isPending ? (
+                      {isLoading ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isNewUser ? "Creating Account…" : "Verifying…"}
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Verifying...
                         </>
                       ) : (
                         <>
-                          <ChevronRight className="mr-2 h-4 w-4" />
-                          {isNewUser
-                            ? "Create Account & Continue"
-                            : "Verify & Login"}
+                          <ChevronRight className="mr-2 h-5 w-5" />
+                          Verify & Login
                         </>
                       )}
                     </Button>
+
                     <button
                       type="button"
                       onClick={() => {
                         setStep("aadhaar");
                         setOtp("");
-                        setDemoOtp(null);
-                        setIsNewUser(false);
-                        setName("");
-                        setCourse("");
-                        setCollege("");
+                        setShowOtpSent(false);
                       }}
-                      className="w-full text-sm text-muted-foreground hover:text-foreground transition-smooth"
-                      data-ocid="student.login.back_button"
+                      className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors py-2"
+                      disabled={isLoading}
                     >
-                      ← Change Aadhaar / mobile number
+                      ← Change Aadhaar or Phone Number
                     </button>
                   </CardContent>
                 </Card>
@@ -523,23 +384,31 @@ export function LoginPage() {
             )}
           </AnimatePresence>
 
-          <div className="grid grid-cols-3 gap-3 mt-2">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+            className="grid grid-cols-3 gap-3"
+          >
             {[
               { icon: Library, text: "Free Books" },
               { icon: Shield, text: "Secure OTP" },
               { icon: IndianRupee, text: "₹200 Deposit" },
-            ].map((f) => (
-              <div
+            ].map((f, idx) => (
+              <motion.div
                 key={f.text}
-                className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-white/70 border border-sky-100"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + idx * 0.1, duration: 0.4 }}
+                className="flex flex-col items-center gap-2 p-3 rounded-lg bg-white/70 border border-sky-100 hover:border-sky-200 transition-all hover:shadow-sm"
               >
                 <f.icon className="h-5 w-5 text-primary" />
-                <span className="text-xs text-muted-foreground font-body">
+                <span className="text-xs text-muted-foreground font-medium">
                   {f.text}
                 </span>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </main>
 

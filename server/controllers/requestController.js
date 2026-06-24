@@ -1,5 +1,6 @@
 const { createRequest } = require('../services/requestService');
 const Request = require('../models/Request');
+const Notification = require('../models/Notification');
 
 const submitRequest = async (req, res) => {
   try {
@@ -57,8 +58,21 @@ const updateRequestStatus = async (req, res) => {
       req.params.id,
       { status },
       { new: true }
-    );
+    ).populate('userId', '-passwordHash');
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
+
+    // Create notification for the student
+    try {
+      const student = request.userId;
+      const title = `Request ${String(request._id)} — ${status}`;
+      const message = `Your request ${String(request._id)} status changed to ${status}.`;
+      if (student && student._id) {
+        const actionUrl = `/student/challan/${String(request._id)}`;
+        await Notification.create({ studentId: student._id, title, message, type: 'request', actionUrl });
+      }
+    } catch (e) {
+      console.error('[Notifications] Failed to create notification for status change:', e);
+    }
 
     return res.json({ success: true, request });
   } catch (err) {

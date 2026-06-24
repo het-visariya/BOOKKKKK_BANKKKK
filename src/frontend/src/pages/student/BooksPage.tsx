@@ -348,6 +348,18 @@ function ManualBookForm({
           data-ocid="books.manual.publisher_input"
         />
       </div>
+      <div className="sm:col-span-2">
+        <Label htmlFor="manual-note" className="text-xs">
+          Notes / special instructions
+        </Label>
+        <Input
+          id="manual-note"
+          placeholder="Provide any details for the procurement team"
+          value={form.note ?? ""}
+          onChange={(e) => handleChange("note", e.target.value)}
+          data-ocid="books.manual.note_input"
+        />
+      </div>
       {/* Image Upload */}
       <div className="sm:col-span-2">
         <BookImageUpload
@@ -744,6 +756,7 @@ export function BooksPage() {
           edition: m.edition,
           publisher: m.publisher,
           imageUrl: m.imageUrl,
+          note: m.note,
         })),
       });
 

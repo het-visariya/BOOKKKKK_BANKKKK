@@ -306,35 +306,69 @@ interface CsvPreviewRow extends BookCsvRow {
 }
 
 function parseCsv(text: string): { rows: CsvPreviewRow[]; error?: string } {
-  const lines = text.trim().split("\n");
+  const lines = text.trim().split(/\r?\n/).filter((line) => line.trim().length > 0);
   if (lines.length < 2) return { rows: [], error: "CSV has no data rows" };
-  const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
-  const required = [
+
+  const normalizeHeader = (header: string) =>
+    header.replace(/^\uFEFF/, "").trim().toLowerCase();
+
+  const canonicalHeader = (header: string) => {
+    const normalized = normalizeHeader(header);
+    if (normalized === "total copies" || normalized === "totalcopies" || normalized === "quantity") {
+      return "qty";
+    }
+    if (
+      normalized === "available copies" ||
+      normalized === "availablecopies" ||
+      normalized === "available count" ||
+      normalized === "availablecount"
+    ) {
+      return "available";
+    }
+    return normalized;
+  };
+
+  const headers = lines[0].split(",").map(canonicalHeader);
+  console.log("RAW HEADER LINE:", lines[0]);
+  console.log("PARSED HEADERS:", headers);
+  const requiredColumns = [
     "title",
     "author",
     "edition",
     "publisher",
-    "totalcopies",
-    "availablecopies",
     "category",
+    "qty",
+    "available",
   ];
-  for (const r of required) {
-    if (!header.includes(r)) return { rows: [], error: `Missing column: ${r}` };
+
+  const missingColumns = requiredColumns.filter(
+    (column) => !headers.includes(column),
+  );
+  if (missingColumns.length > 0) {
+    return { rows: [], error: `Missing column: ${missingColumns[0]}` };
   }
+
   const rows: CsvPreviewRow[] = [];
+  const indexOf = (column: string) => headers.indexOf(column);
+
   for (let i = 1; i < lines.length; i++) {
     const cols = lines[i].split(",").map((c) => c.trim());
-    if (cols.length < header.length) continue;
-    const get = (key: string) => cols[header.indexOf(key)] ?? "";
+    if (cols.length < headers.length) continue;
+    const get = (key: string) => cols[indexOf(key)] ?? "";
+    const quantityValue = Number(get("qty")) || 0;
+    const availableValue = Number(get("available")) || quantityValue;
+
     rows.push({
       _rowNum: i,
       title: get("title"),
       author: get("author"),
       edition: get("edition"),
       publisher: get("publisher"),
-      totalCopies: Number(get("totalcopies")) || 0,
-      availableCopies: Number(get("availablecopies")) || 0,
       category: get("category"),
+      quantity: quantityValue,
+      available: availableValue,
+      totalCopies: quantityValue,
+      availableCopies: availableValue,
     });
   }
   return { rows };

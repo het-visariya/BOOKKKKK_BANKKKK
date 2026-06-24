@@ -11,7 +11,7 @@ router.get('/current-user', authMiddleware, getCurrentUser);
 // Admin auth
 router.post('/admin/login', adminLogin);
 
-// Demo OTP (local development)
+// OTP-based login (SMS)
 router.post('/otp/send', sendOtp);
 router.post('/otp/verify', verifyOtp);
 

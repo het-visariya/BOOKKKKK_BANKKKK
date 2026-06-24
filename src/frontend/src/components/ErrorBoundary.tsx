@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { LOGO_SRC } from "./layout/AppLayout";
 
 interface Props {
   children: ReactNode;
@@ -39,8 +40,8 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="max-w-sm w-full text-center space-y-5">
             <div className="mx-auto h-16 w-16 rounded-full bg-white border-4 border-[#B8E0E8] overflow-hidden shadow-md p-1">
               <img
-                src="/assets/svga-logo.png"
-                alt="SVGA"
+                src={LOGO_SRC}
+                alt="SVGA Book Bank"
                 className="w-full h-full rounded-full object-contain"
               />
             </div>

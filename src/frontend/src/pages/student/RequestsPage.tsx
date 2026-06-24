@@ -261,6 +261,43 @@ const STATUS_FILTERS: StatusFilter[] = [
   "Rejected",
 ];
 
+function normalizeManualDecision(raw?: string | null) {
+  const status = String(raw ?? "").trim().toLowerCase();
+  switch (status) {
+    case "requested":
+    case "pending":
+      return "Pending";
+    case "approved":
+      return "Approved";
+    case "rejected":
+      return "Rejected";
+    case "reserved":
+    case "acceptreservation":
+    case "accept_reservation":
+      return "Reserved";
+    case "ordered":
+      return "Ordered";
+    case "procured":
+      return "Procured";
+    case "arrived":
+    case "reached office":
+    case "reachedoffice":
+      return "Arrived";
+    case "readyforcollection":
+    case "ready_for_collection":
+      return "ReadyForCollection";
+    case "issued":
+    case "collected":
+      return "Issued";
+    case "returned":
+      return "Returned";
+    case "specialorder":
+      return "SpecialOrder";
+    default:
+      return String(raw ?? "Pending");
+  }
+}
+
 function ApprovedDeadlineInfo({ createdAt }: { createdAt: string }) {
   const issued = new Date(createdAt);
   const deadline = new Date(issued);
@@ -304,6 +341,20 @@ function FullChallanView({
   );
   const decisions = collectionOrder?.bookDecisions ?? [];
 
+  // Format dates for display
+  const dateStr = new Date(req.createdAt).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const inventoryDecisions = decisions.filter(
+    (d) => d.inventoryId && String(d.inventoryId).trim() !== "",
+  );
+  const manualDecisions = decisions.filter(
+    (d) => !d.inventoryId || String(d.bookId).startsWith("manual_"),
+  );
+
   const requestManualTitles = new Set(
     req.requestedBooks.map((b) => b.title.toLowerCase().trim()),
   );
@@ -312,16 +363,18 @@ function FullChallanView({
   );
 
   const manualBooksWithStatus = req.requestedBooks.map((b) => {
+    const matchedDecision = manualDecisions.find(
+      (d) =>
+        String(d.bookName ?? "").toLowerCase().trim() ===
+        b.title.toLowerCase().trim(),
+    );
     const matched = matchedProcurements.find(
       (p) => p.bookTitle.toLowerCase().trim() === b.title.toLowerCase().trim(),
     );
-    const orderDecision = decisions.find(
-      (d) =>
-        d.decision === "SpecialOrder" &&
-        d.bookName.toLowerCase().trim() === b.title.toLowerCase().trim(),
-    );
-    const status: string = orderDecision
-      ? "SpecialOrder"
+    const directDecision = normalizeManualDecision(b.decision);
+
+    const status: string = matchedDecision
+      ? normalizeManualDecision(String(matchedDecision.decision))
       : matched
         ? matched.status === "Procured"
           ? "Procured"
@@ -334,27 +387,14 @@ function FullChallanView({
                 : matched.status === "Cancelled"
                   ? "Rejected"
                   : "Pending"
-        : "Pending";
+        : directDecision || "Pending";
     return { book: b, status };
   });
 
-  const dateStr = new Date(req.createdAt).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-  const finalizedAt = collectionOrder?.generatedAt
-    ? new Date(collectionOrder.generatedAt).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      })
-    : null;
-
-  const libraryDecisions = decisions.filter(
+  const decisionsForDisplay = inventoryDecisions.filter(
     (d) => d.decision !== "SpecialOrder",
   );
-  const useDecisions = libraryDecisions.length > 0;
+  const useDecisions = decisionsForDisplay.length > 0;
 
   return (
     <div
@@ -426,7 +466,7 @@ function FullChallanView({
           </div>
           <div className="space-y-2">
             {useDecisions
-              ? libraryDecisions.map((d, i) => (
+              ? decisionsForDisplay.map((d, i) => (
                   <ChallanBookCard
                     key={`${d.bookId}-${i}`}
                     title={d.bookName}
@@ -549,19 +589,6 @@ function FullChallanView({
               <p className="text-xs text-muted-foreground">{dateStr}</p>
             </div>
           </div>
-          {finalizedAt && (
-            <div className="flex items-start gap-3">
-              <div className="mt-0.5 h-5 w-5 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
-                <CheckCircle2 className="h-3 w-3 text-teal-600" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-foreground">
-                  Finalized by Admin
-                </p>
-                <p className="text-xs text-muted-foreground">{finalizedAt}</p>
-              </div>
-            </div>
-          )}
           {(req.status === "Approved" || req.status === "Procured") && (
             <div className="flex items-start gap-3">
               <div className="mt-0.5 h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">

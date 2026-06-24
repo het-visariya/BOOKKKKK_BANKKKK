@@ -11,6 +11,7 @@ const {
 } = require('../controllers/adminController');
 const Request = require('../models/Request');
 const Book = require('../models/Book');
+const Notification = require('../models/Notification');
 
 router.use(authMiddleware, adminMiddleware);
 
@@ -34,6 +35,20 @@ router.patch('/requests/:id/status', async (req, res) => {
       { new: true }
     ).populate('userId', '-passwordHash').populate('selectedBookIds');
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
+
+    // create notification for the student about status change
+    try {
+      const student = request.userId;
+      const title = `Request ${String(request._id)} — ${status}`;
+      const message = `Your request ${String(request._id)} status changed to ${status}.`;
+      if (student && student._id) {
+        const actionUrl = `/student/challan/${String(request._id)}`;
+        await Notification.create({ studentId: student._id, title, message, type: 'request', actionUrl });
+      }
+    } catch (e) {
+      console.error('[Notifications] Failed to create notification on admin status update:', e);
+    }
+
     return res.json({ success: true, request });
   } catch (err) {
     console.error('[Admin] UpdateRequestStatus error:', err);
@@ -93,6 +108,18 @@ router.patch('/requests/:id/book-decision', async (req, res) => {
     }
 
     await request.save();
+    // create notification to student about per-book decision
+    try {
+      const student = request.userId;
+      const title = `Request ${String(request._id)} — Book decision updated`;
+      const message = `A decision was made on one of the books in your request ${String(request._id)}.`;
+      if (student && student._id) {
+        const actionUrl = `/student/challan/${String(request._id)}`;
+        await Notification.create({ studentId: student._id, title, message, type: 'request', actionUrl });
+      }
+    } catch (e) {
+      console.error('[Notifications] Failed to create notification for book decision:', e);
+    }
     return res.json({ success: true, request: await request.populate('selectedBookIds') });
   } catch (err) {
     console.error('[Admin] UpdateBookDecision error:', err);

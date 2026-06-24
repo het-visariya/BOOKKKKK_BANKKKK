@@ -2,10 +2,13 @@ const QRCode = require('qrcode');
 const Request = require('../models/Request');
 const User = require('../models/User');
 
-const generateChallan = async (requestId, userId) => {
+const generateChallan = async (
+  requestId,
+  userId,
+  metadata = {},
+) => {
   const request = await Request.findById(requestId);
   if (!request) throw new Error('Request not found');
-  if (String(request.userId) !== String(userId)) throw new Error('Unauthorized');
 
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
@@ -22,11 +25,15 @@ const generateChallan = async (requestId, userId) => {
     selectedBooks: request.selectedBooks,
     requestedBooks: request.requestedBooks,
     status: request.status,
+    collectionDate: metadata.collectionDate ?? null,
+    collectionTime: metadata.collectionTime ?? null,
+    collectionLocation: metadata.collectionLocation ?? null,
+    adminName: metadata.adminName ?? null,
     generatedAt: new Date().toISOString(),
   };
 
-  // QR code encodes the challan URL (frontend route)
-  const qrUrl = `/challan/${requestId}`;
+  // QR code encodes the frontend student challan route
+  const qrUrl = `/student/challan/${requestId}`;
   const qrCodeDataUrl = await QRCode.toDataURL(qrUrl, { width: 256, margin: 2 });
 
   request.challanData = JSON.stringify(challanData);

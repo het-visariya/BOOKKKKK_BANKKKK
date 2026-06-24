@@ -53,6 +53,10 @@ export interface User {
   studentId: string;
   membershipStatus: "PAID" | "NOT_PAID";
   paymentStatus: "SUCCESS" | "PENDING" | "FAILED";
+  /** Whether user has completed profile setup */
+  profileCompleted?: boolean;
+  /** Whether user has uploaded profile photo */
+  photoUploaded?: boolean;
   role: "student" | "admin";
   profilePhoto?: string;
   /** Legacy field — same as profilePhoto */
@@ -114,6 +118,7 @@ export interface BookCsvRow {
   publisher?: string;
   category?: string;
   quantity?: number;
+  available?: number;
 }
 
 export interface CsvImportResult {
@@ -585,6 +590,7 @@ export interface ManualBookEntry {
   edition: string;
   publisher: string;
   imageUrl: string;
+  note?: string;
 }
 
 export interface RegistrationFormData {

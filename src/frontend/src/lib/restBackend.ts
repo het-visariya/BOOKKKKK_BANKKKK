@@ -8,6 +8,10 @@ const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
   "";
 
+const INGEST_URL =
+  (import.meta.env.VITE_INGEST_URL as string | undefined)?.replace(/\/$/, "") ||
+  "";
+
 function ok<T>(value: T): { __kind__: "ok"; ok: T } {
   return { __kind__: "ok", ok: value };
 }
@@ -45,6 +49,27 @@ async function request<T>(
     );
   }
   return data;
+}
+
+function normalizeCourseToCategory(course: string | null | undefined) {
+  if (!course) return null;
+  const raw = String(course).trim().toLowerCase();
+  const map: Record<string, string> = {
+    fyjc: 'FYJC',
+    'fyjc science': 'FYJC',
+    syjc: 'SYJC',
+    engineering: 'Engineering',
+    commerce: 'Commerce',
+    medical: 'Medical',
+    general: 'General',
+  };
+  // Direct token match
+  if (map[raw]) return map[raw];
+  // Contains keyword
+  for (const k of Object.keys(map)) {
+    if (raw.includes(k)) return map[k];
+  }
+  return null;
 }
 
 function mongoBookToCanister(book: Record<string, unknown>) {
@@ -114,6 +139,83 @@ function mongoRequestToCanister(req: Record<string, unknown>) {
         typeof b === "object" && b ? String((b as { _id?: string })._id) : String(b),
       )
     : [];
+  const selectedBooksRaw = Array.isArray(req.selectedBooks)
+    ? (req.selectedBooks as Record<string, unknown>[])
+    : [];
+  const requestedBooksRaw = Array.isArray(req.requestedBooks)
+    ? (req.requestedBooks as Record<string, unknown>[])
+    : [];
+  const selectedBooks = selectedBooksRaw.map((sb) => ({
+    title: String(sb.title ?? ""),
+    author: String(sb.author ?? ""),
+    edition: String(sb.edition ?? ""),
+    publisher: String(sb.publisher ?? ""),
+    issueDate: String(sb.issueDate ?? ""),
+    returnDate: String(sb.returnDate ?? ""),
+    returned: Boolean(sb.returned),
+  }));
+  const requestedBooks = requestedBooksRaw.map((rb) => ({
+    title: String(rb.title ?? ""),
+    author: String(rb.author ?? ""),
+    edition: String(rb.edition ?? ""),
+    publisher: String(rb.publisher ?? ""),
+    note: String(rb.note ?? ""),
+    imageUrl: String(rb.imageUrl ?? ""),
+    decision: String(rb.decision ?? ""),
+  }));
+
+  const bookDecisions: Record<string, unknown>[] = [];
+  for (let i = 0; i < Math.max(selectedBooksRaw.length, selectedIds.length); i++) {
+    const sb = selectedBooksRaw[i] || {};
+    const inventoryId =
+      typeof selectedIds[i] === "object" && selectedIds[i]
+        ? String((selectedIds[i] as { _id?: string })._id ?? selectedIds[i])
+        : String(selectedIds[i] ?? `book_${i}`);
+    bookDecisions.push({
+      bookId: inventoryId,
+      bookName: String(sb.title ?? ""),
+      bookNumber: String(i + 1),
+      inventoryId,
+      decision: String(sb.decision ?? "") || "Pending",
+      reason: String(sb.reason ?? "") || null,
+      expectedReturnDate: sb.returnDate
+        ? toNs(String(sb.returnDate))
+        : null,
+      currentHolder: sb.currentHolder ?? null,
+      procurementCreated: false,
+      author: String(sb.author ?? ""),
+      edition: String(sb.edition ?? ""),
+      publisher: String(sb.publisher ?? ""),
+    });
+  }
+  for (let j = 0; j < requestedBooksRaw.length; j++) {
+    const rb = requestedBooksRaw[j] || {};
+    bookDecisions.push({
+      bookId: `manual_${j}`,
+      bookName: String(rb.title ?? ""),
+      bookNumber: String(selectedBooksRaw.length + j + 1),
+      inventoryId: "",
+      decision: String(rb.decision ?? "") || "Pending",
+      reason: String(rb.note ?? rb.reason ?? "") || null,
+      expectedReturnDate: null,
+      currentHolder: null,
+      procurementCreated: false,
+      author: String(rb.author ?? ""),
+      edition: String(rb.edition ?? ""),
+      publisher: String(rb.publisher ?? ""),
+    });
+  }
+  const specialRequests = requestedBooksRaw.map((rb) => ({
+    status: String(rb.decision ?? "Pending"),
+    title: String(rb.title ?? ""),
+    author: String(rb.author ?? ""),
+    edition: String(rb.edition ?? ""),
+    publisher: String(rb.publisher ?? ""),
+    procurementId: null,
+    expectedAvailabilityDate: null,
+    reason: rb.note ? String(rb.note) : undefined,
+  }));
+
   return {
     requestId: id,
     userId: userIdStr || String(user._id ?? ""),
@@ -125,29 +227,10 @@ function mongoRequestToCanister(req: Record<string, unknown>) {
     studentEmail: String(req.studentEmail ?? user.email ?? ""),
     studentYear: String(req.studentYear ?? ""),
     selectedBookIds: selectedIds,
-    selectedBooks: Array.isArray(req.selectedBooks)
-      ? req.selectedBooks.map((sb: Record<string, unknown>) => ({
-          title: String(sb.title ?? ""),
-          author: String(sb.author ?? ""),
-          edition: String(sb.edition ?? ""),
-          publisher: String(sb.publisher ?? ""),
-          issueDate: String(sb.issueDate ?? ""),
-          returnDate: String(sb.returnDate ?? ""),
-          returned: Boolean(sb.returned),
-        }))
-      : [],
-    requestedBooks: Array.isArray(req.requestedBooks)
-      ? req.requestedBooks.map((rb: Record<string, unknown>) => ({
-          title: String(rb.title ?? ""),
-          author: String(rb.author ?? ""),
-          edition: String(rb.edition ?? ""),
-          publisher: String(rb.publisher ?? ""),
-          imageUrl: String(rb.imageUrl ?? ""),
-          decision: String(rb.decision ?? ""),
-        }))
-      : [],
-    bookDecisions: [],
-    specialRequests: [],
+    selectedBooks,
+    requestedBooks,
+    bookDecisions,
+    specialRequests,
     status: String(req.status ?? "Pending"),
     challanData: req.challanData ?? null,
     createdAt: toNs(req.createdAt as string),
@@ -171,7 +254,8 @@ function analyticsFromApi(analytics: Record<string, number>) {
 export const restBackend = {
   async adminLogin(username: string, password: string) {
     // #region agent log
-    fetch("http://127.0.0.1:7755/ingest/02e5a082-ce85-4eb5-ba31-4f93cc4081d7", {
+    if (INGEST_URL) {
+      fetch(`${INGEST_URL}/ingest/02e5a082-ce85-4eb5-ba31-4f93cc4081d7`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -186,7 +270,8 @@ export const restBackend = {
         data: { username, hasPassword: !!password },
         timestamp: Date.now(),
       }),
-    }).catch(() => {});
+      }).catch(() => {});
+    }
     // #endregion
     try {
       const data = await request<{
@@ -199,8 +284,8 @@ export const restBackend = {
         body: JSON.stringify({ username, password }),
       });
       // #region agent log
-      fetch(
-        "http://127.0.0.1:7755/ingest/02e5a082-ce85-4eb5-ba31-4f93cc4081d7",
+      if (INGEST_URL) {
+        fetch(`${INGEST_URL}/ingest/02e5a082-ce85-4eb5-ba31-4f93cc4081d7`,
         {
           method: "POST",
           headers: {
@@ -216,8 +301,8 @@ export const restBackend = {
             data: { hasToken: !!data.token, expiresAt: data.expiresAt },
             timestamp: Date.now(),
           }),
-        },
-      ).catch(() => {});
+        }).catch(() => {});
+      }
       // #endregion
       return ok({
         token: data.token,
@@ -225,8 +310,8 @@ export const restBackend = {
       });
     } catch (e) {
       // #region agent log
-      fetch(
-        "http://127.0.0.1:7755/ingest/02e5a082-ce85-4eb5-ba31-4f93cc4081d7",
+      if (INGEST_URL) {
+        fetch(`${INGEST_URL}/ingest/02e5a082-ce85-4eb5-ba31-4f93cc4081d7`,
         {
           method: "POST",
           headers: {
@@ -242,8 +327,8 @@ export const restBackend = {
             data: { error: String(e) },
             timestamp: Date.now(),
           }),
-        },
-      ).catch(() => {});
+        }).catch(() => {});
+      }
       // #endregion
       return err(e instanceof Error ? e.message : String(e));
     }
@@ -251,11 +336,12 @@ export const restBackend = {
 
   async sendOtp(aadhaarNumber: string, phone: string) {
     try {
-      const data = await request<{ otp: string; demo: boolean }>(
+      await request<{ success: boolean; message: string }>(
         "/api/auth/otp/send",
         { method: "POST", body: JSON.stringify({ aadhaarNumber, phone }) },
       );
-      return ok({ otp: data.otp, demo: data.demo ?? true });
+      // OTP was sent via SMS. Frontend should NOT receive the actual OTP for security.
+      return ok({ otp: "", demo: false });
     } catch (e) {
       return err(e instanceof Error ? e.message : String(e));
     }
@@ -375,7 +461,9 @@ export const restBackend = {
   async searchBooks(searchTerm: string, course: string) {
     const params = new URLSearchParams();
     if (searchTerm) params.set("search", searchTerm);
-    if (course) params.set("course", course);
+    // Map UI course label to backend category token when possible
+    const cat = normalizeCourseToCategory(course);
+    if (cat) params.set('course', cat);
     const data = await request<{ books: Record<string, unknown>[] }>(
       `/api/books?${params}`,
     );
@@ -739,14 +827,6 @@ export const restBackend = {
     return [];
   },
 
-  async getUnreadCount(_token: string) {
-    return BigInt(0);
-  },
-
-  async createStudentNotification() {
-    return ok(null);
-  },
-
   async updateStudentProfile() {
     return ok(null);
   },
@@ -781,16 +861,54 @@ export const restBackend = {
     return [];
   },
 
-  async getMyNotifications() {
-    return [];
+  async getMyNotifications(token: string) {
+    try {
+      const data = await request<{ notifications: Record<string, unknown>[] }>(
+        "/api/student/notifications",
+        { token },
+      );
+      // Ensure actionUrl is present on objects (backend may include it)
+      return (data.notifications || []).map((n: Record<string, unknown>) => ({
+        ...n,
+        actionUrl: n.actionUrl ?? null,
+      }));
+    } catch (e) {
+      return [];
+    }
   },
 
-  async markNotificationRead() {
-    return ok(null);
+  async markNotificationRead(notificationId: string, token: string) {
+    try {
+      const data = await request<{ notification: Record<string, unknown> }>(
+        `/api/student/notifications/${notificationId}/read`,
+        { method: 'PATCH', token },
+      );
+      return data.notification;
+    } catch (e) {
+      return null;
+    }
   },
 
-  async markAllNotificationsRead() {
-    return ok(null);
+  async getUnreadCount(token: string) {
+    try {
+      const notifs = await restBackend.getMyNotifications(token);
+      const unread = Array.isArray(notifs) ? notifs.filter((n) => !n.isRead).length : 0;
+      return BigInt(unread);
+    } catch (e) {
+      return BigInt(0);
+    }
+  },
+
+  async createStudentNotification(adminToken: string, studentId: string, title: string, message: string) {
+    try {
+      const data = await request<{ notification: Record<string, unknown> }>(
+        '/api/admin/notifications',
+        { method: 'POST', token: adminToken, body: JSON.stringify({ studentId, title, message }) },
+      );
+      return ok(data.notification);
+    } catch (e) {
+      return err(e instanceof Error ? e.message : String(e));
+    }
   },
 
   async createUrgentProcurementRequest() {
@@ -860,16 +978,126 @@ export const restBackend = {
     return ok([]);
   },
 
-  async completeApproval(adminToken: string, requestId: string) {
-    return restBackend.updateRequestStatus(adminToken, requestId, "Approved");
+  async completeApproval(
+    adminToken: string,
+    requestId: string,
+    collectionDate: string,
+    collectionTime: string,
+    collectionLocation: string,
+    adminName: string,
+  ) {
+    try {
+      const data = await request<{
+        success: boolean;
+        challanData: Record<string, unknown>;
+        qrCodeDataUrl: string;
+        requestId: string;
+      }>("/api/challans/create", {
+        method: "POST",
+        token: adminToken,
+        body: JSON.stringify({
+          requestId,
+          collectionDate,
+          collectionTime,
+          collectionLocation,
+          adminName,
+        }),
+      });
+      return ok(data);
+    } catch (e) {
+      return err(e instanceof Error ? e.message : String(e));
+    }
   },
 
   async getAllCollectionOrders() {
     return [];
   },
 
-  async getCollectionOrder() {
-    return err("Collection orders not yet implemented on local API");
+  async getCollectionOrder(token: string, requestId: string) {
+    try {
+      const data = await request<{ request: Record<string, unknown> }>(
+        `/api/requests/${requestId}`,
+        { token },
+      );
+      const req = data.request;
+      if (!req) return err('Request not found');
+
+      // Try to parse challanData if present
+      let challan = null as null | Record<string, unknown>;
+      try {
+        if (req.challanData) {
+          challan = typeof req.challanData === 'string' ? JSON.parse(String(req.challanData)) : (req.challanData as Record<string, unknown>);
+        }
+      } catch {}
+
+      const selected = Array.isArray(req.selectedBooks) ? req.selectedBooks as Record<string, unknown>[] : [];
+      const selectedIds = Array.isArray(req.selectedBookIds) ? req.selectedBookIds : [];
+      const requested = Array.isArray(req.requestedBooks) ? req.requestedBooks as Record<string, unknown>[] : [];
+
+      const bookDecisions: Record<string, unknown>[] = [];
+      // Library books
+      for (let i = 0; i < Math.max(selected.length, (selectedIds as any).length); i++) {
+        const sb = selected[i] || {};
+        const idRaw = (selectedIds as any)[i];
+        const inventoryId = typeof idRaw === 'object' && idRaw ? String((idRaw as { _id?: string })._id ?? idRaw) : String(idRaw ?? '');
+        bookDecisions.push({
+          bookId: inventoryId || `book_${i}`,
+          bookName: String(sb.title ?? ''),
+          bookNumber: String(i + 1),
+          inventoryId,
+          decision: String(sb.decision ?? '') || 'Pending',
+          reason: sb.reason ?? null,
+          expectedReturnDate: sb.returnDate ? toNs(String(sb.returnDate)) : null,
+          currentHolder: sb.currentHolder ?? null,
+          procurementCreated: false,
+        });
+      }
+
+      // Manual/requested books
+      for (let j = 0; j < requested.length; j++) {
+        const rb = requested[j] || {};
+        bookDecisions.push({
+          bookId: `manual_${j}`,
+          bookName: String(rb.title ?? ''),
+          bookNumber: String(selected.length + j + 1),
+          inventoryId: null,
+          decision: String(rb.decision ?? '') || 'Pending',
+          reason: String(rb.note ?? rb.reason ?? null) || null,
+          expectedReturnDate: null,
+          currentHolder: null,
+          procurementCreated: false,
+        });
+      }
+
+      const collectionDate = challan?.collectionDate ?? null;
+      const collectionTime = challan?.collectionTime ?? null;
+      const collectionLocation = challan?.collectionLocation ?? null;
+      const adminName = challan?.adminName ?? null;
+      const generatedAt = challan?.generatedAt ? toNs(String(challan.generatedAt)) : toNs(req.updatedAt as string);
+
+      const orderNumber = req.requestId ? String(req.requestId) : String(req._id ?? '').slice(-8);
+
+      return ok({
+        orderId: String(req._id ?? orderNumber),
+        orderNumber,
+        collectionDate: collectionDate ?? null,
+        collectionTime: collectionTime ?? null,
+        collectionLocation: collectionLocation ?? null,
+        bookDecisions,
+        studentId: String(req.studentId ?? req.userId ?? ''),
+        studentName: String(req.studentName ?? ''),
+        requestId: String(req._id ?? orderNumber),
+        adminName: adminName ?? null,
+        generatedAt,
+        challanId: null,
+        studentEmail: String(req.studentEmail ?? ''),
+        studentPhone: String(req.studentPhone ?? ''),
+        studentCourse: String(req.studentCourse ?? ''),
+        status: String(req.status ?? ''),
+      });
+    } catch (e) {
+      return err(e instanceof Error ? e.message : String(e));
+    }
   },
 
   async getRequestDetails(adminToken: string, requestId: string) {
@@ -1070,6 +1298,9 @@ export const restBackend = {
           edition: String(procurement.edition ?? ""),
           publisher: String(procurement.publisher ?? ""),
           status: String(procurement.status ?? "Pending"),
+          isPurchased: Boolean(procurement.isPurchased ?? false),
+          purchaseBatchId: String(procurement.purchaseBatchId ?? ""),
+          purchasePdfUrl: String(procurement.purchasePdfUrl ?? ""),
         },
       };
     });
