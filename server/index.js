@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/database');
 const { seedBooks } = require('./services/bookService');
+const { getPort } = require('./utils/port');
 
 // Global OTP store for demo mode
 global.otpStore = new Map();
@@ -65,10 +66,14 @@ app.use((err, _req, res, _next) => {
 
 // --- Start ---
 const start = async () => {
-  await connectDB();
-  await seedBooks();
-  app.listen(PORT, () => {
-    console.log(`[Server] SVGA Book Bank API running on port ${PORT}`);
+  const dbConnected = await connectDB();
+  if (dbConnected) {
+    await seedBooks();
+  }
+
+  const port = await getPort(PORT);
+  app.listen(port, '0.0.0.0', () => {
+    console.log(`[Server] SVGA Book Bank API running on port ${port}`);
     console.log(`[Server] Made by Devansh Nisar, Het Visariya & Trish Shah --- Haaland`);
   });
 };

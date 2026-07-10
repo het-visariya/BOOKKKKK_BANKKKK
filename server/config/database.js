@@ -1,16 +1,11 @@
 const mongoose = require('mongoose');
 
+const DEFAULT_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/svga-book-bank';
+
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    const isProd = process.env.NODE_ENV === 'production';
-    console.error('MONGODB_URI missing from .env');
-    if (isProd) {
-      process.exit(1);
-    } else {
-      console.warn('Skipping MongoDB connection in non-production environment');
-      return;
-    }
+  const uri = process.env.MONGODB_URI || DEFAULT_URI;
+  if (!process.env.MONGODB_URI) {
+    console.warn('[DB] MONGODB_URI not set, using local default URI');
   }
 
   try {
@@ -22,13 +17,18 @@ const connectDB = async () => {
       hostName = uri;
     }
 
-    console.log(`MongoDB URI host: ${hostName}`);
-    await mongoose.connect(uri);
-    console.log('MongoDB Connected');
+    console.log(`[DB] MongoDB URI host: ${hostName}`);
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 3000 });
+    console.log('[DB] MongoDB Connected');
+    return true;
   } catch (error) {
-    console.error('MongoDB Connection Failed:');
-    console.error(error);
-    process.exit(1);
+    console.error('[DB] MongoDB Connection Failed:');
+    console.error(error.message);
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
+    console.warn('[DB] Continuing without MongoDB in non-production mode');
+    return false;
   }
 };
 
