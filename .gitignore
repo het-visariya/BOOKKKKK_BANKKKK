@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.mops/
+.old/
+.platform/
+.pnpm-store/
+.cache/
+/.env
+/.env.*.local
+/.env.local
+.env
+dist/
+uploads/*
+!uploads/.gitkeep
+

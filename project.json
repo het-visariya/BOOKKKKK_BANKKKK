@@ -1,0 +1,23 @@
+{
+  "overview": "A production-grade digital library management system for SVGA organization that helps students borrow books and admins manage approvals, challans, and procurement.",
+  "features": [
+    "Per-book Approve/Reject with instant status updates",
+    "Final Submit validation requiring all book decisions",
+    "Manual book procurement lifecycle tracking",
+    "Unified challan system across admin and student views",
+    "Completed Forms and Manual Books To Purchase sections",
+    "Atomic updates preventing duplicate submissions",
+    "Real-time sync across all dashboards and notifications",
+    "Collection details locked after final submission"
+  ],
+  "category": "productivity",
+  "tags": [
+    "library",
+    "book-management",
+    "education",
+    "admin",
+    "challan",
+    "procurement"
+  ],
+  "last_updated": "2026-06-12T14:44:11.727Z"
+}
