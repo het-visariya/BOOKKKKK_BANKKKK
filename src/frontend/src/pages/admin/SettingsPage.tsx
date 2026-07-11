@@ -195,7 +195,7 @@ function StripeConfigSection() {
             </p>
           </div>
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-700">
-            Payment amount is fixed at <strong>₹200</strong> (membership
+            Payment amount is fixed at <strong>₹500</strong> (membership
             deposit). Allowed region: India.
           </div>
           <Button

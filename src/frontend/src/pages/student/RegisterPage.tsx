@@ -443,7 +443,7 @@ export function RegisterPage() {
         loginWithSession(registerRes.token, realUser);
         if (actor && registerRes.token) {
           actor
-            .recordPayment(registerRes.token, `demo_${Date.now()}`, BigInt(200))
+            .recordPayment(registerRes.token, `demo_${Date.now()}`, BigInt(500))
             .catch(() => {});
         }
       } catch {
@@ -1359,7 +1359,7 @@ export function RegisterPage() {
                     Membership Payment
                   </CardTitle>
                   <CardDescription>
-                    Pay the \u20b9200 refundable deposit to activate your
+                    Pay the \u20b9500 refundable deposit to activate your
                     account.
                   </CardDescription>
                 </div>
@@ -1377,7 +1377,7 @@ export function RegisterPage() {
                     </span>
                     <span className="text-2xl font-display font-bold text-primary flex items-center gap-1">
                       <IndianRupee className="h-5 w-5" />
-                      200
+                      500
                     </span>
                   </div>
                   <ul className="space-y-2 text-sm text-muted-foreground">
@@ -1418,7 +1418,7 @@ export function RegisterPage() {
                   </div>
                 </div>
                 <span className="text-lg font-display font-bold text-primary">
-                  \u20b9200
+                  \u20b9500
                 </span>
               </div>
               <Button
@@ -1434,7 +1434,7 @@ export function RegisterPage() {
                   </>
                 ) : (
                   <>
-                    <Zap className="h-5 w-5 fill-white" /> Pay \u20b9200 \u2014
+                    <Zap className="h-5 w-5 fill-white" /> Pay \u20b9500 \u2014
                     Complete Registration
                   </>
                 )}
@@ -1459,7 +1459,7 @@ export function RegisterPage() {
           isOpen={paymentModalOpen}
           onClose={() => setPaymentModalOpen(false)}
           onSuccess={handlePaymentSuccess}
-          amount={200}
+          amount={500}
           studentName={fullName}
         />
       </div>

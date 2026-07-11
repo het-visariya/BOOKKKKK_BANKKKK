@@ -125,7 +125,7 @@ const demoPayment = async (req, res) => {
 
     await Payment.create({
       userId: user._id,
-      amount: 200,
+      amount: 500,
       status: 'SUCCESS',
       transactionId: user.paymentId,
       paymentMethod: 'demo',
@@ -193,7 +193,7 @@ const registerAndPay = async (req, res) => {
       existing.paymentStatus = 'SUCCESS';
       existing.paymentId = existing.paymentId || 'DEMO_' + uuidv4().slice(0, 8).toUpperCase();
       await existing.save();
-      await Payment.create({ userId: existing._id, amount: 200, status: 'SUCCESS', transactionId: existing.paymentId, paymentMethod: 'demo' });
+      await Payment.create({ userId: existing._id, amount: 500, status: 'SUCCESS', transactionId: existing.paymentId, paymentMethod: 'demo' });
       const token = generateToken(String(existing._id), existing.role);
       return res.json({ success: true, token, user: existing.toPublic(), alreadyExists: true });
     }
@@ -220,7 +220,7 @@ const registerAndPay = async (req, res) => {
 
     await Payment.create({
       userId: user._id,
-      amount: 200,
+      amount: 500,
       status: 'SUCCESS',
       transactionId: paymentId,
       paymentMethod: 'demo',
@@ -326,6 +326,8 @@ const verifyOtp = async (req, res) => {
       });
     }
 
+    const cleanAadhaar = (aadhaarNumber || '').replace(/\D/g, '').trim();
+
     console.log('[Auth] Verifying OTP:', cleanOtp, 'for phone:', cleanPhone);
 
     const msg91VerifyUrl = `${MSG91_BASE_URL}/otp/verify?authkey=${encodeURIComponent(msg91ApiKey)}&mobile=${countryCode}${cleanPhone}&otp=${cleanOtp}`;
@@ -345,11 +347,25 @@ const verifyOtp = async (req, res) => {
 
     console.log(`[Auth] OTP verified successfully for +${countryCode}${cleanPhone}`);
 
-    let user = await User.findOne({ phone: cleanPhone });
+    let user = null;
     let isNewUser = false;
 
-    if (!user && aadhaarNumber) {
-      user = await User.findOne({ aadhaarNumber });
+    if (cleanAadhaar && cleanPhone) {
+      user = await User.findOne({ aadhaarNumber: cleanAadhaar, phone: cleanPhone });
+    }
+
+    if (!user && cleanAadhaar) {
+      user = await User.findOne({ aadhaarNumber: cleanAadhaar });
+      if (user && user.phone !== cleanPhone) {
+        user.phone = cleanPhone;
+      }
+    }
+
+    if (!user && cleanPhone) {
+      user = await User.findOne({ phone: cleanPhone });
+      if (user && cleanAadhaar && user.aadhaarNumber !== cleanAadhaar) {
+        user.aadhaarNumber = cleanAadhaar;
+      }
     }
 
     if (!user) {
@@ -358,16 +374,26 @@ const verifyOtp = async (req, res) => {
 
       user = await User.create({
         phone: cleanPhone,
-        aadhaarNumber: aadhaarNumber || '',
+        aadhaarNumber: cleanAadhaar || '',
         studentId,
         role: 'student',
         profileCompleted: false,
         paymentStatus: 'PENDING',
         membershipStatus: 'NOT_PAID',
         passwordHash: 'otp_login',
+        frozenAadhaar: true,
+        frozenPhone: true,
       });
 
       console.log(`[Auth] New temporary user created: phone=${cleanPhone} (ID: ${user.studentId})`);
+    }
+
+    if (user) {
+      user.phone = cleanPhone;
+      if (cleanAadhaar) user.aadhaarNumber = cleanAadhaar;
+      user.frozenAadhaar = true;
+      user.frozenPhone = true;
+      await user.save();
     }
 
     const token = generateToken(String(user._id), user.role);

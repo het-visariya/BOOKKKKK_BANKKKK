@@ -785,7 +785,7 @@ export function DashboardPage() {
                       <span className="font-semibold">Membership Active</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      ₹200 deposit paid on {paymentDate}
+                      ₹500 membership deposit paid on {paymentDate}
                     </p>
                     <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 mt-2">
                       <p className="text-xs text-emerald-700">
@@ -801,7 +801,7 @@ export function DashboardPage() {
                         Payment Pending
                       </p>
                       <p className="text-xs text-amber-700">
-                        Pay ₹200 refundable deposit to activate membership.
+                        Pay ₹500 refundable deposit to activate membership.
                       </p>
                     </div>
                     <Button
@@ -809,7 +809,7 @@ export function DashboardPage() {
                       onClick={() => navigate({ to: "/student/register" })}
                       data-ocid="dashboard.pay_now_button"
                     >
-                      Pay ₹200 Deposit
+                      Pay ₹500 Deposit
                     </Button>
                   </div>
                 )}

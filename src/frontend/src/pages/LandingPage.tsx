@@ -24,7 +24,7 @@ const features = [
     icon: GraduationCap,
     title: "Free for All Students",
     description:
-      "Any SVGA student can borrow books. Just pay a fully refundable ₹200 deposit.",
+      "Any SVGA student can borrow books. Just pay a fully refundable ₹500 deposit.",
   },
   {
     icon: Zap,
@@ -43,7 +43,7 @@ const steps = [
   },
   {
     number: "02",
-    title: "Pay ₹200 Deposit",
+    title: "Pay ₹500 Deposit",
     description:
       "Pay the fully refundable membership deposit to activate your account.",
   },
@@ -84,7 +84,7 @@ const testimonials = [
 const stats = [
   { value: "2,000+", label: "Books", sub: "across all streams" },
   { value: "500+", label: "Students", sub: "helped every year" },
-  { value: "₹200", label: "Deposit", sub: "fully refundable" },
+  { value: "₹500", label: "Deposit", sub: "fully refundable" },
   { value: "10+", label: "Streams", sub: "FYJC to Engineering" },
 ];
 
@@ -212,7 +212,7 @@ export function LandingPage() {
             className="text-lg md:text-xl text-[#1e3a5f]/80 font-body leading-relaxed mb-8 max-w-xl mx-auto"
           >
             Get free books for your studies — register, pay a refundable{" "}
-            <span className="text-[#5AC8D8] font-semibold">₹200 deposit</span>,
+            <span className="text-[#5AC8D8] font-semibold">₹500 deposit</span>,
             and take home up to{" "}
             <span className="text-[#5AC8D8] font-semibold">3 books</span>.
           </motion.p>
@@ -257,7 +257,7 @@ export function LandingPage() {
           >
             <CheckCircle2 className="h-4 w-4 text-[#5AC8D8] shrink-0" />
             <span className="text-sm text-[#1e3a5f]/70">
-              ₹200 fully refunded when you return your books
+              ₹500 fully refunded when you return your books
             </span>
           </motion.div>
         </div>
@@ -553,7 +553,7 @@ export function LandingPage() {
               variants={fadeUp}
               className="text-[#1e3a5f]/60 text-sm pt-2"
             >
-              ✓ Free for all SVGA students &nbsp;&nbsp; ✓ ₹200 fully refundable
+              ✓ Free for all SVGA students &nbsp;&nbsp; ✓ ₹500 fully refundable
               &nbsp;&nbsp; ✓ No hidden charges
             </motion.p>
           </motion.div>

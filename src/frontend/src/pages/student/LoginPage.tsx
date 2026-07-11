@@ -390,7 +390,7 @@ export function LoginPage() {
             {[
               { icon: Library, text: "Free Books" },
               { icon: Shield, text: "Secure OTP" },
-              { icon: IndianRupee, text: "₹200 Deposit" },
+              { icon: IndianRupee, text: "₹500 Deposit" },
             ].map((f, idx) => (
               <motion.div
                 key={f.text}

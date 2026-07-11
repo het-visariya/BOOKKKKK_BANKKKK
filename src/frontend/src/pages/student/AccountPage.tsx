@@ -230,7 +230,7 @@ export function AccountPage() {
               <li>
                 The librarian will inspect the books and confirm the return.
               </li>
-              <li>Your ₹200 deposit will be refunded after verification.</li>
+              <li>Your ₹500 deposit will be refunded after verification.</li>
             </ol>
             <div className="rounded-lg bg-sky-50 border border-sky-200 p-3 text-xs text-sky-800">
               <strong>Library hours:</strong> Mon–Sat, 9 AM – 5 PM
@@ -437,7 +437,7 @@ export function AccountPage() {
                     <StatusBadge status={payment ? "Paid" : "unpaid"} />
                   </div>
                   <p className="text-3xl font-display font-bold text-primary">
-                    ₹200
+                    ₹500
                   </p>
                   {payment ? (
                     <p className="text-xs text-muted-foreground mt-1">

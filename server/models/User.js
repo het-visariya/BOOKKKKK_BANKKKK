@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, default: 'otp_login' },
     phone: { type: String, trim: true },
     aadhaarNumber: { type: String, trim: true, sparse: true },
+    frozenAadhaar: { type: Boolean, default: false },
+    frozenPhone: { type: Boolean, default: false },
+    stream: { type: String, trim: true },
+    educationSpecialization: { type: String, trim: true },
     course: {
       type: String,
       trim: true,
@@ -56,6 +60,8 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+userSchema.index({ aadhaarNumber: 1, phone: 1 }, { unique: true, sparse: true, name: 'aadhaar_phone_unique' });
 
 userSchema.statics.generateStudentId = async function () {
   const count = await this.countDocuments({ role: 'student' });

@@ -883,7 +883,7 @@ function ChallanContent({
             <p className="text-xs text-muted-foreground mb-0.5">
               Membership Deposit
             </p>
-            <p className="font-bold text-primary">₹200</p>
+            <p className="font-bold text-primary">₹500</p>
           </div>
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">
@@ -945,7 +945,7 @@ function ChallanContent({
         <p className="text-xs text-muted-foreground">
           Membership Deposit:{" "}
           <strong className="text-foreground">
-            ₹200 (Refundable on return)
+            ₹500 (Refundable on return)
           </strong>
         </p>
       </div>

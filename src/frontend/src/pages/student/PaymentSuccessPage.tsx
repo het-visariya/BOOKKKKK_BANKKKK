@@ -174,7 +174,7 @@ export function PaymentSuccessPage() {
                   <span className="font-semibold text-foreground">
                     {studentName}
                   </span>
-                  ! Your ₹200 membership is confirmed.
+                  ! Your ₹500 membership is confirmed.
                 </p>
                 <p className="text-xs text-muted-foreground mt-3 animate-pulse">
                   Taking you to your dashboard…

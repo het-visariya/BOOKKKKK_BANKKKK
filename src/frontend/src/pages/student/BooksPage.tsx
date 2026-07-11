@@ -66,7 +66,7 @@ const COURSES = [
 ];
 
 const WIZARD_STEPS = [
-  { id: 1, label: "Select Course" },
+  { id: 1, label: "Select Course & Stream" },
   { id: 2, label: "Choose Books" },
 ];
 
@@ -429,6 +429,7 @@ export function BooksPage() {
 
   const [step, setStep] = useState(1);
   const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedStream, setSelectedStream] = useState("");
 
   // Filter state (URL-persisted)
   const authorFilter = searchParams.author ?? "All";
@@ -436,6 +437,14 @@ export function BooksPage() {
   const categoryBookFilter = searchParams.category ?? "All";
   const sortFilter = searchParams.sort ?? "title-asc";
   const [showBookFilters, setShowBookFilters] = useState(false);
+
+  const handleContinueFromCourseStep = () => {
+    if (!selectedCourse || !selectedStream.trim()) {
+      toast.error("Please select your course and stream/specialization to continue.");
+      return;
+    }
+    setStep(2);
+  };
 
   const setBookFilter = (key: string, value: string) => {
     navigate({
@@ -1043,39 +1052,56 @@ export function BooksPage() {
                     What are you studying?
                   </h2>
                   <p className="text-sm text-muted-foreground mb-6">
-                    Select your course so we can show the most relevant books.
+                    Select your course and stream so we can show the most relevant books.
                   </p>
-                  <div className="space-y-2 text-left">
-                    <Label
-                      htmlFor="course-select"
-                      className="text-sm font-medium"
-                    >
-                      Course / Standard
-                    </Label>
-                    <Select
-                      value={selectedCourse}
-                      onValueChange={setSelectedCourse}
-                    >
-                      <SelectTrigger
-                        id="course-select"
-                        data-ocid="books.step1.course_select"
-                        className="w-full"
+                  <div className="space-y-4 text-left">
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="course-select"
+                        className="text-sm font-medium"
                       >
-                        <SelectValue placeholder="Select your course…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COURSES.map((course) => (
-                          <SelectItem key={course} value={course}>
-                            {course}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        Course / Standard <span className="text-destructive">*</span>
+                      </Label>
+                      <Select
+                        value={selectedCourse}
+                        onValueChange={setSelectedCourse}
+                      >
+                        <SelectTrigger
+                          id="course-select"
+                          data-ocid="books.step1.course_select"
+                          className="w-full"
+                        >
+                          <SelectValue placeholder="Select your course…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COURSES.map((course) => (
+                            <SelectItem key={course} value={course}>
+                              {course}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="stream-select"
+                        className="text-sm font-medium"
+                      >
+                        Stream / Specialization <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="stream-select"
+                        value={selectedStream}
+                        onChange={(e) => setSelectedStream(e.target.value)}
+                        placeholder="e.g. Science, Commerce, Computer Science"
+                        data-ocid="books.step1.stream_input"
+                      />
+                    </div>
                   </div>
                   <Button
                     className="w-full mt-6 gap-2"
-                    disabled={!selectedCourse}
-                    onClick={() => setStep(2)}
+                    disabled={!selectedCourse || !selectedStream.trim()}
+                    onClick={handleContinueFromCourseStep}
                     data-ocid="books.step1.continue_button"
                   >
                     Continue
@@ -1091,10 +1117,14 @@ export function BooksPage() {
             <div className="space-y-6">
               {/* Course badge + back */}
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm text-muted-foreground">Course:</span>
                   <Badge className="bg-primary/10 text-primary border-primary/20">
                     {selectedCourse}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">Stream:</span>
+                  <Badge className="bg-sky-100 text-sky-700 border-sky-200">
+                    {selectedStream || "—"}
                   </Badge>
                 </div>
                 <button
