@@ -77,14 +77,14 @@ export function LoginPage() {
     try {
       const cleanPhone = phone.replace(/[- ]/g, "");
       const cleanAadhaar = aadhaar.replace(/[- ]/g, "");
-      await sendOtpMutation.mutateAsync({
+      const result = await sendOtpMutation.mutateAsync({
         aadhaarNumber: cleanAadhaar,
         phone: cleanPhone,
         type: "sms",
       });
       setShowOtpSent(true);
       setStep("otp");
-      toast.success("✓ OTP sent to +91" + cleanPhone);
+      toast.success(result?.message || "OTP sent successfully");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to send OTP";
       toast.error(msg);
@@ -309,9 +309,6 @@ export function LoginPage() {
                       >
                         <p className="font-semibold mb-1">📱 OTP Sent</p>
                         <p>Check your SMS for the 4-digit verification code</p>
-                        <p className="text-xs text-blue-700 mt-2 opacity-75">
-                          (In demo mode, check browser console or backend logs)
-                        </p>
                       </motion.div>
                     )}
 

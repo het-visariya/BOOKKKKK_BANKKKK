@@ -6,9 +6,6 @@ const connectDB = require('./config/database');
 const { seedBooks } = require('./services/bookService');
 const { getPort } = require('./utils/port');
 
-// Global OTP store for demo mode
-global.otpStore = new Map();
-
 // Route modules
 const authRoutes = require('./routes/auth');
 const bookRoutes = require('./routes/books');
