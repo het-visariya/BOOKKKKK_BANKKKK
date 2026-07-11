@@ -159,15 +159,15 @@ function TimelineStep({ number, title, description, Icon }: { number: string; ti
 
 function LocationCard() {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-white/90 p-8 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
-      <div className="mb-8">
+    <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+      <div className="mb-5">
         <p className="text-xs uppercase tracking-[0.3em] text-[#0B5E78]">Our Location</p>
         <h3 className="mt-4 text-3xl font-display font-bold text-slate-950">Our Location</h3>
-        <p className="mt-4 text-sm leading-7 text-slate-600">Find us easily. Drop by to register, pick up your books, or return them at your convenience.</p>
+        <p className="mt-3 text-sm leading-6 text-slate-600">Find us easily. Drop by to register, pick up your books, or return them at your convenience.</p>
       </div>
 
-      <div className="space-y-5">
-        <div className="rounded-[24px] bg-[#F8FBFF] p-5 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
+      <div className="space-y-3">
+        <div className="rounded-[24px] bg-[#F8FBFF] p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
           <div className="flex items-start gap-4">
             <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F4F8] text-[#0B5E78]">
               <MapPin className="h-5 w-5" />
@@ -179,26 +179,26 @@ function LocationCard() {
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-[#F8FBFF] p-5 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
+        <div className="rounded-[24px] bg-[#F8FBFF] p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
           <div className="flex items-start gap-4">
             <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F4F8] text-[#0B5E78]">
               <Phone className="h-5 w-5" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-950">Phone</p>
-              <p className="mt-1.5 text-sm leading-6 text-slate-600">090223 13382</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">090223 13382</p>
             </div>
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-[#F8FBFF] p-5 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
+        <div className="rounded-[24px] bg-[#F8FBFF] p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
           <div className="flex items-start gap-4">
             <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F4F8] text-[#0B5E78]">
               <Clock className="h-5 w-5" />
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-950">Working Hours</p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Monday – Saturday<br />9:00 AM – 5:00 PM<br />Sunday Closed</p>
+              <p className="mt-1 text-sm leading-6 text-slate-600">Monday – Saturday<br />9:00 AM – 5:00 PM<br />Sunday Closed</p>
             </div>
           </div>
         </div>
@@ -208,7 +208,7 @@ function LocationCard() {
         href="https://www.google.com/maps?q=Shree+Vagad+Graduates+Association+%28SVGA%29+M+Square+Park+Plaza+Dadar+West+Mumbai+400028"
         target="_blank"
         rel="noreferrer"
-        className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-[16px] bg-gradient-to-r from-[#0B5E78] via-[#0F7A96] to-[#0D82A3] px-6 py-4 text-sm font-semibold text-white shadow-[0_18px_50px_-30px_rgba(11,94,120,0.65)] transition duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-28px_rgba(11,94,120,0.45)]"
+        className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-[16px] bg-gradient-to-r from-[#0B5E78] via-[#0F7A96] to-[#0D82A3] px-6 py-4 text-sm font-semibold text-white shadow-[0_18px_50px_-30px_rgba(11,94,120,0.65)] transition duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-28px_rgba(11,94,120,0.45)]"
       >
         <MapPin className="h-5 w-5" />
         Get Directions
@@ -655,19 +655,19 @@ export function LandingPage() {
               </p>
             </motion.div>
 
-            <div className="grid gap-10 md:grid-cols-[0.58fr_0.42fr] lg:grid-cols-[0.55fr_0.45fr] items-start">
+            <div className="grid gap-10 md:grid-cols-[0.48fr_0.52fr] lg:grid-cols-[0.46fr_0.54fr] items-start">
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="group overflow-hidden rounded-[24px] border border-slate-200/70 bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.12)] transition duration-300 hover:shadow-[0_35px_100px_-40px_rgba(15,23,42,0.18)]"
+                className="group relative overflow-hidden rounded-[24px] border border-slate-200/70 bg-white shadow-[0_30px_90px_-45px_rgba(15,23,42,0.12)] transition duration-300 hover:shadow-[0_35px_100px_-40px_rgba(15,23,42,0.18)] h-[640px] md:h-[700px] lg:h-[760px]"
               >
-                <div className="overflow-hidden rounded-[24px] transition duration-300 group-hover:scale-[1.01] aspect-[4/3]">
+                <div className="absolute inset-0 overflow-hidden rounded-[24px] transition duration-300 group-hover:scale-[1.01]">
                   <iframe
                     title="SVGA Book Bank location"
                     src="https://www.google.com/maps?q=Shree+Vagad+Graduates+Association+%28SVGA%29+M+Square+Park+Plaza+Dadar+West+Mumbai+400028&output=embed"
-                    className="h-full w-full border-none"
+                    className="absolute inset-0 h-full w-full border-none"
                     allowFullScreen
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
