@@ -1,15 +1,117 @@
+# ==========================
+# Dependencies
+# ==========================
 node_modules/
-dist/
-.mops/
-.old/
-.platform/
-.pnpm-store/
-.cache/
-/.env
-/.env.*.local
-/.env.local
-.env
-dist/
-uploads/*
-!uploads/.gitkeep
+**/node_modules/
 
+# ==========================
+# Build Outputs
+# ==========================
+dist/
+build/
+coverage/
+.vite/
+.cache/
+
+# ==========================
+# Environment Files
+# ==========================
+.env
+.env.*
+!.env.example
+
+server/.env
+client/.env
+frontend/.env
+backend/.env
+
+# ==========================
+# Logs
+# ==========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# ==========================
+# OS Files
+# ==========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==========================
+# VS Code
+# ==========================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ==========================
+# JetBrains
+# ==========================
+.idea/
+
+# ==========================
+# Temporary Files
+# ==========================
+tmp/
+temp/
+*.tmp
+
+# ==========================
+# Runtime Files
+# ==========================
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# ==========================
+# Uploads (if generated at runtime)
+# ==========================
+uploads/
+storage/
+public/uploads/
+
+# ==========================
+# Testing
+# ==========================
+coverage/
+.nyc_output/
+
+# ==========================
+# Local Database
+# ==========================
+*.sqlite
+*.sqlite3
+
+# ==========================
+# Secrets
+# ==========================
+*.pem
+*.key
+*.crt
+
+# ==========================
+# React/Vite
+# ==========================
+vite.svg
+
+# ==========================
+# Optional Cache
+# ==========================
+.eslintcache
+
+# ==========================
+# Archives
+# ==========================
+*.zip
+*.tar
+*.gz
+
+# ==========================
+# Generated Reports
+# ==========================
+reports/
