@@ -3,6 +3,30 @@ const Payment = require('../models/Payment');
 const { hashPassword, comparePassword, generateToken } = require('../services/authService');
 const { v4: uuidv4 } = require('uuid');
 
+const normalizeIdentityValue = (value = '') => String(value).replace(/\D/g, '').trim();
+
+const findStudentByIdentity = async ({ aadhaarNumber, phone }) => {
+  const cleanAadhaar = normalizeIdentityValue(aadhaarNumber);
+  const cleanPhone = normalizeIdentityValue(phone);
+
+  if (cleanAadhaar && cleanPhone) {
+    const compoundUser = await User.findOne({ aadhaarNumber: cleanAadhaar, phone: cleanPhone });
+    if (compoundUser) {
+      return { user: compoundUser, cleanAadhaar, cleanPhone };
+    }
+  }
+
+  if (cleanAadhaar && cleanPhone) {
+    const fallbackUser = await User.findOne({
+      $or: [{ aadhaarNumber: cleanAadhaar }, { phone: cleanPhone }],
+    });
+    if (fallbackUser) {
+      return { user: fallbackUser, cleanAadhaar, cleanPhone };
+    }
+  }
+
+  return { user: null, cleanAadhaar, cleanPhone };
+};
 
 const register = async (req, res) => {
   try {
@@ -180,34 +204,45 @@ const registerAndPay = async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    const cleanPhone = normalizeIdentityValue(phone);
+    const cleanAadhaar = normalizeIdentityValue(aadhaarNumber);
+    const paymentId = 'DEMO_' + uuidv4().slice(0, 8).toUpperCase();
 
-    // If user already exists and is PAID, just return their token (idempotent)
-    const existing = await User.findOne({ email: normalizedEmail });
-    if (existing) {
-      if (existing.membershipStatus === 'PAID') {
-        const token = generateToken(String(existing._id), existing.role);
-        return res.json({ success: true, token, user: existing.toPublic(), alreadyExists: true });
+    const { user: existingUser } = await findStudentByIdentity({ aadhaarNumber: cleanAadhaar, phone: cleanPhone });
+    if (existingUser) {
+      existingUser.name = existingUser.name || name;
+      existingUser.email = normalizedEmail;
+      existingUser.phone = cleanPhone || existingUser.phone;
+      if (cleanAadhaar) existingUser.aadhaarNumber = cleanAadhaar;
+      existingUser.course = course || existingUser.course || 'Other';
+      existingUser.college = college || existingUser.college || '';
+      existingUser.profilePhoto = profilePhoto || existingUser.profilePhoto || null;
+      existingUser.membershipStatus = 'PAID';
+      existingUser.paymentStatus = 'SUCCESS';
+      existingUser.paymentId = existingUser.paymentId || paymentId;
+      existingUser.frozenAadhaar = true;
+      existingUser.frozenPhone = true;
+      existingUser.profileCompleted = true;
+      await existingUser.save();
+
+      const existingPayment = await Payment.findOne({ userId: existingUser._id }).sort({ createdAt: -1 });
+      if (!existingPayment) {
+        await Payment.create({ userId: existingUser._id, amount: 500, status: 'SUCCESS', transactionId: existingUser.paymentId, paymentMethod: 'demo' });
       }
-      // Exists but not paid — upgrade them
-      existing.membershipStatus = 'PAID';
-      existing.paymentStatus = 'SUCCESS';
-      existing.paymentId = existing.paymentId || 'DEMO_' + uuidv4().slice(0, 8).toUpperCase();
-      await existing.save();
-      await Payment.create({ userId: existing._id, amount: 500, status: 'SUCCESS', transactionId: existing.paymentId, paymentMethod: 'demo' });
-      const token = generateToken(String(existing._id), existing.role);
-      return res.json({ success: true, token, user: existing.toPublic(), alreadyExists: true });
+
+      const token = generateToken(String(existingUser._id), existingUser.role);
+      return res.json({ success: true, token, user: existingUser.toPublic(), alreadyExists: true });
     }
 
     const passwordHash = await hashPassword(password);
     const studentId = await User.generateStudentId();
-    const paymentId = 'DEMO_' + uuidv4().slice(0, 8).toUpperCase();
 
     const user = await User.create({
       name,
       email: normalizedEmail,
       passwordHash,
-      phone: phone || '',
-      aadhaarNumber: aadhaarNumber || '',
+      phone: cleanPhone || '',
+      aadhaarNumber: cleanAadhaar || '',
       course: course || 'Other',
       college: college || '',
       profilePhoto: profilePhoto || null,
@@ -216,6 +251,9 @@ const registerAndPay = async (req, res) => {
       paymentStatus: 'SUCCESS',
       paymentId,
       role: 'student',
+      frozenAadhaar: true,
+      frozenPhone: true,
+      profileCompleted: true,
     });
 
     await Payment.create({
@@ -326,7 +364,7 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    const cleanAadhaar = (aadhaarNumber || '').replace(/\D/g, '').trim();
+    const cleanAadhaar = normalizeIdentityValue(aadhaarNumber);
 
     console.log('[Auth] Verifying OTP:', cleanOtp, 'for phone:', cleanPhone);
 
@@ -347,64 +385,51 @@ const verifyOtp = async (req, res) => {
 
     console.log(`[Auth] OTP verified successfully for +${countryCode}${cleanPhone}`);
 
-    let user = null;
-    let isNewUser = false;
-
-    if (cleanAadhaar && cleanPhone) {
-      user = await User.findOne({ aadhaarNumber: cleanAadhaar, phone: cleanPhone });
-    }
-
-    if (!user && cleanAadhaar) {
-      user = await User.findOne({ aadhaarNumber: cleanAadhaar });
-      if (user && user.phone !== cleanPhone) {
-        user.phone = cleanPhone;
-      }
-    }
-
-    if (!user && cleanPhone) {
-      user = await User.findOne({ phone: cleanPhone });
-      if (user && cleanAadhaar && user.aadhaarNumber !== cleanAadhaar) {
-        user.aadhaarNumber = cleanAadhaar;
-      }
-    }
-
-    if (!user) {
-      const studentId = await User.generateStudentId();
-      isNewUser = true;
-
-      user = await User.create({
-        phone: cleanPhone,
-        aadhaarNumber: cleanAadhaar || '',
-        studentId,
-        role: 'student',
-        profileCompleted: false,
-        paymentStatus: 'PENDING',
-        membershipStatus: 'NOT_PAID',
-        passwordHash: 'otp_login',
-        frozenAadhaar: true,
-        frozenPhone: true,
-      });
-
-      console.log(`[Auth] New temporary user created: phone=${cleanPhone} (ID: ${user.studentId})`);
-    }
+    const { user, cleanAadhaar: verifiedAadhaar, cleanPhone: verifiedPhone } = await findStudentByIdentity({
+      aadhaarNumber: cleanAadhaar,
+      phone: cleanPhone,
+    });
 
     if (user) {
-      user.phone = cleanPhone;
-      if (cleanAadhaar) user.aadhaarNumber = cleanAadhaar;
+      user.phone = verifiedPhone;
+      if (verifiedAadhaar) user.aadhaarNumber = verifiedAadhaar;
       user.frozenAadhaar = true;
       user.frozenPhone = true;
       await user.save();
+
+      const token = generateToken(String(user._id), user.role);
+      return res.json({
+        success: true,
+        token,
+        user: user.toPublic(),
+        needsRegistration: false,
+        isExistingUser: true,
+        profileCompleted: user.profileCompleted,
+        paymentStatus: user.paymentStatus,
+        membershipStatus: user.membershipStatus,
+        message: 'OTP verified successfully',
+      });
     }
 
-    const token = generateToken(String(user._id), user.role);
+    const pendingToken = generateToken(`otp:${verifiedAadhaar || 'unknown'}:${verifiedPhone}`, 'student');
     return res.json({
       success: true,
-      token,
-      user: user.toPublic(),
-      isNewUser,
-      profileCompleted: user.profileCompleted,
-      paymentStatus: user.paymentStatus,
-      message: 'OTP verified successfully',
+      token: pendingToken,
+      user: {
+        aadhaarNumber: verifiedAadhaar,
+        phone: verifiedPhone,
+        frozenAadhaar: true,
+        frozenPhone: true,
+        profileCompleted: false,
+        paymentStatus: 'PENDING',
+        membershipStatus: 'NOT_PAID',
+      },
+      needsRegistration: true,
+      isNewUser: true,
+      profileCompleted: false,
+      paymentStatus: 'PENDING',
+      membershipStatus: 'NOT_PAID',
+      message: 'No existing student found. Please complete registration.',
     });
   } catch (error) {
     console.error('VERIFY OTP ERROR:', error);

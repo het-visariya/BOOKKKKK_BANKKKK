@@ -545,13 +545,15 @@ export function useVerifyOtpAndLogin() {
         photoUploaded: data.user?.photoUploaded ?? false,
         role: data.user?.role || "student",
       };
-      return { 
-        token: data.token, 
-        user, 
+      return {
+        token: data.token,
+        user,
         userId: data.user?.id || data.user?._id,
         isNewUser: data.isNewUser ?? false,
+        needsRegistration: data.needsRegistration ?? false,
         profileCompleted: data.profileCompleted ?? false,
         paymentStatus: data.paymentStatus || "PENDING",
+        membershipStatus: data.membershipStatus || "NOT_PAID",
       };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["currentUser"] }),

@@ -45,9 +45,7 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    if (membershipPaid) navigate({ to: "/student/dashboard" });
-    else navigate({ to: "/student/register" });
-  }, [isAuthenticated, membershipPaid, navigate]);
+  }, [isAuthenticated]);
 
   const validateAadhaarAndPhone = () => {
     const errs = { aadhaar: "", phone: "", otp: "" };
@@ -105,11 +103,10 @@ export function LoginPage() {
       setAadhaarSession(result.token, result.user);
       toast.success("✓ Login successful! Welcome to SVGA Book Bank 🎉");
       setTimeout(() => {
-        // Redirect based on profile completion and payment status
-        if (result.user.profileCompleted && result.user.paymentStatus === "SUCCESS") {
-          navigate({ to: "/student/dashboard" });
-        } else {
+        if (result.needsRegistration) {
           navigate({ to: "/student/register" });
+        } else {
+          navigate({ to: "/student/dashboard" });
         }
       }, 500);
     } catch (err) {
