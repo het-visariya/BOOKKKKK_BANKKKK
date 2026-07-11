@@ -38,24 +38,74 @@ router.post('/import-csv', authMiddleware, adminMiddleware, async (req, res) => 
     let inserted = 0;
     let skipped = 0;
     const errors = [];
+
     for (const row of rows) {
       try {
-        if (!row.title || !row.author) { skipped++; continue; }
-        await Book.create({
-          title: row.title,
-          author: row.author,
-          edition: row.edition || '',
-          publisher: row.publisher || '',
-          category: row.category || 'General',
-          quantity: Number(row.quantity) || 1,
-          availableQuantity: Number(row.availableQuantity) || Number(row.quantity) || 1,
-        });
-        inserted++;
+        const title = String(row.title ?? '').trim();
+        const author = String(row.author ?? '').trim();
+        const edition = String(row.edition ?? '').trim();
+        const publisher = String(row.publisher ?? '').trim();
+        const category = String(row.category ?? 'General').trim() || 'General';
+        const shelf = String(row.shelf ?? '').trim();
+        const grade = String(row.grade ?? '').trim();
+        const subject = String(row.subject ?? '').trim();
+        const subjectCode = String(row.subjectCode ?? '').trim();
+        const isbn = String(row.isbn ?? '').trim();
+        const quantity = Number(row.totalCopies ?? row.quantity ?? 0);
+        const available = Number(row.availableCopies ?? row.available ?? quantity);
+
+        if (!title || !author || quantity <= 0) {
+          skipped++;
+          continue;
+        }
+
+        const normalizedQuantity = Math.max(0, quantity);
+        const normalizedAvailable = Math.min(Math.max(0, available), normalizedQuantity);
+        const query = isbn
+          ? { isbn }
+          : { title, author, edition };
+
+        const existing = isbn
+          ? await Book.findOne(query)
+          : await Book.findOne(query);
+
+        if (existing) {
+          existing.title = title;
+          existing.author = author;
+          existing.edition = edition;
+          existing.publisher = publisher;
+          existing.category = category;
+          existing.shelf = shelf;
+          existing.grade = grade;
+          existing.subject = subject;
+          existing.subjectCode = subjectCode;
+          existing.isbn = isbn || existing.isbn;
+          existing.quantity = normalizedQuantity;
+          existing.availableQuantity = normalizedAvailable;
+          await existing.save();
+        } else {
+          await Book.create({
+            title,
+            author,
+            edition,
+            publisher,
+            category,
+            shelf,
+            grade,
+            subject,
+            subjectCode,
+            isbn: isbn || undefined,
+            quantity: normalizedQuantity,
+            availableQuantity: normalizedAvailable,
+          });
+          inserted++;
+        }
       } catch (e) {
-        errors.push(e.message);
+        errors.push(e instanceof Error ? e.message : String(e));
         skipped++;
       }
     }
+
     return res.json({ success: true, inserted, skipped, errors });
   } catch (err) {
     console.error('[Books] ImportCsv error:', err);

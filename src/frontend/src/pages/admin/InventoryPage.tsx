@@ -21,6 +21,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   useAddBook,
   useDeleteBook,
   useGetBookLifecycleFlow,
@@ -64,7 +71,7 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 const CATEGORY_OPTIONS = [
@@ -89,25 +96,27 @@ const SORT_OPTIONS = [
 ];
 
 const CSV_TEMPLATE =
-  "title,author,edition,publisher,totalCopies,availableCopies,category\n" +
-  "Physics Part 1,H.C. Verma,1st,Bharati Bhawan,10,10,Science\n" +
-  "Business Studies,Poonam Gandhi,3rd,VK Publications,5,5,Commerce";
+  "shelf,title,author,publisher,edition,category,quantity,available\n" +
+  "A1,Physics Part 1,H.C. Verma,Bharati Bhawan,1st,Science,10,10\n" +
+  "B2,Business Studies,Poonam Gandhi,VK Publications,3rd,Commerce,5,5";
 
 interface BookFormState {
+  shelf: string;
   title: string;
   author: string;
-  edition: string;
   publisher: string;
+  edition: string;
   category: string;
   quantity: string;
   availableCount: string;
 }
 
 const emptyForm: BookFormState = {
+  shelf: "",
   title: "",
   author: "",
-  edition: "",
   publisher: "",
+  edition: "",
   category: "",
   quantity: "1",
   availableCount: "1",
@@ -129,6 +138,10 @@ function BookFormDialog({
   submitting: boolean;
 }) {
   const [form, setForm] = useState<BookFormState>(initial);
+  useEffect(() => {
+    setForm(initial);
+  }, [initial]);
+
   const set =
     (field: keyof BookFormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -178,7 +191,6 @@ function BookFormDialog({
                 id="inv-edition"
                 value={form.edition}
                 onChange={set("edition")}
-                required
                 placeholder="e.g. 3rd"
                 data-ocid="admin.inventory.edition_input"
               />
@@ -189,7 +201,6 @@ function BookFormDialog({
                 id="inv-publisher"
                 value={form.publisher}
                 onChange={set("publisher")}
-                required
                 placeholder="Publisher"
                 data-ocid="admin.inventory.publisher_input"
               />
@@ -200,9 +211,18 @@ function BookFormDialog({
                 id="inv-category"
                 value={form.category}
                 onChange={set("category")}
-                required
                 placeholder="e.g. Science"
                 data-ocid="admin.inventory.category_input"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="inv-shelf">Shelf</Label>
+              <Input
+                id="inv-shelf"
+                value={form.shelf}
+                onChange={set("shelf")}
+                placeholder="e.g. A1"
+                data-ocid="admin.inventory.shelf_input"
               />
             </div>
             <div className="space-y-1.5">
@@ -301,6 +321,7 @@ function DeleteConfirmDialog({
 
 interface CsvPreviewRow extends BookCsvRow {
   _rowNum: number;
+  shelf?: string;
   totalCopies?: number;
   availableCopies?: number;
 }
@@ -332,10 +353,11 @@ function parseCsv(text: string): { rows: CsvPreviewRow[]; error?: string } {
   console.log("RAW HEADER LINE:", lines[0]);
   console.log("PARSED HEADERS:", headers);
   const requiredColumns = [
+    "shelf",
     "title",
     "author",
-    "edition",
     "publisher",
+    "edition",
     "category",
     "qty",
     "available",
@@ -360,10 +382,11 @@ function parseCsv(text: string): { rows: CsvPreviewRow[]; error?: string } {
 
     rows.push({
       _rowNum: i,
+      shelf: get("shelf"),
       title: get("title"),
       author: get("author"),
-      edition: get("edition"),
       publisher: get("publisher"),
+      edition: get("edition"),
       category: get("category"),
       quantity: quantityValue,
       available: availableValue,
@@ -534,13 +557,14 @@ function CsvImportModal({
                     <tr>
                       {[
                         "#",
+                        "Shelf",
                         "Title",
                         "Author",
-                        "Edition",
                         "Publisher",
+                        "Edition",
                         "Category",
-                        "Total",
-                        "Avail",
+                        "Quantity",
+                        "Available",
                       ].map((h) => (
                         <th
                           key={h}
@@ -557,6 +581,9 @@ function CsvImportModal({
                         <td className="px-3 py-2 text-muted-foreground">
                           {row._rowNum}
                         </td>
+                        <td className="px-3 py-2 text-muted-foreground">
+                          {row.shelf}
+                        </td>
                         <td className="px-3 py-2 max-w-[140px] truncate font-medium">
                           {row.title}
                         </td>
@@ -564,17 +591,19 @@ function CsvImportModal({
                           {row.author}
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">
+                          {row.publisher}
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground">
                           {row.edition}
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">
-                          {row.publisher}
-                        </td>
-                        <td className="px-3 py-2">{row.category}</td>
-                        <td className="px-3 py-2 text-right font-mono">
-                          {String(row.totalCopies)}
+                          {row.category}
                         </td>
                         <td className="px-3 py-2 text-right font-mono">
-                          {String(row.availableCopies)}
+                          {String(row.quantity)}
+                        </td>
+                        <td className="px-3 py-2 text-right font-mono">
+                          {String(row.available)}
                         </td>
                       </tr>
                     ))}
@@ -1260,6 +1289,7 @@ export function InventoryPage() {
         edition: data.edition,
         publisher: data.publisher,
         category: data.category,
+        shelf: data.shelf,
         quantity: Number(data.quantity),
       });
       toast.success("Book added successfully");
@@ -1279,6 +1309,7 @@ export function InventoryPage() {
         edition: data.edition,
         publisher: data.publisher,
         category: data.category,
+        shelf: data.shelf,
         quantity: Number(data.quantity),
         availableCount: Number(data.availableCount),
       });
@@ -1302,6 +1333,7 @@ export function InventoryPage() {
 
   const editForm: BookFormState = editBook
     ? {
+        shelf: editBook.shelf ?? "",
         title: editBook.title,
         author: editBook.author,
         edition: editBook.edition ?? "",
@@ -1594,12 +1626,13 @@ export function InventoryPage() {
                   <thead>
                     <tr className="bg-blue-50 border-b border-border">
                       {[
+                        "Shelf",
                         "Title",
                         "Author",
-                        "Edition",
                         "Publisher",
+                        "Edition",
                         "Category",
-                        "Qty",
+                        "Quantity",
                         "Available",
                         "Actions",
                       ].map((h) => (
@@ -1626,7 +1659,7 @@ export function InventoryPage() {
                     ) : filtered.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="px-4 py-14 text-center"
                           data-ocid="admin.inventory.empty_state"
                         >
@@ -1689,13 +1722,37 @@ export function InventoryPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
+                              {book.shelf || "—"}
+                            </td>
+                            <td className="px-4 py-3 font-medium max-w-[180px]">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate">{book.title}</span>
+                                {isLowStock && !isOutOfStock && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-amber-700 border-amber-300 bg-amber-50 whitespace-nowrap text-[10px] px-1.5"
+                                  >
+                                    Low
+                                  </Badge>
+                                )}
+                                {isOutOfStock && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-red-700 border-red-300 bg-red-50 whitespace-nowrap text-[10px] px-1.5"
+                                  >
+                                    Out
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
                               {book.author}
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
-                              {book.edition}
+                              {book.publisher}
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
-                              {book.publisher}
+                              {book.edition}
                             </td>
                             <td className="px-4 py-3">
                               <span className="px-2 py-0.5 rounded-full text-xs bg-sky-100 text-sky-700 border border-sky-200">

@@ -74,14 +74,20 @@ function canisterBookToBook(b: CanisterBook): Book {
   return {
     _id: b.bookId,
     bookId: b.bookId,
+    shelf: String(b.shelf ?? ""),
     title: b.title,
     author: b.author,
     edition: b.edition,
     publisher: b.publisher,
     category: b.category,
+    subject: String(b.subject ?? ""),
+    grade: String(b.grade ?? ""),
+    subjectCode: String(b.subjectCode ?? ""),
+    isbn: String(b.isbn ?? ""),
     quantity: Number(b.quantity),
     availableQuantity: Number(b.availableCount),
     availableCount: Number(b.availableCount),
+    totalQuantity: Number(b.quantity),
     createdAt: new Date(Number(b.createdAt) / 1_000_000).toISOString(),
   };
 }
@@ -1111,8 +1117,12 @@ export function useAddBook() {
         input.author,
         input.edition ?? "",
         input.publisher ?? "",
-        input.category,
+        input.category ?? "General",
         BigInt(input.quantity),
+        input.subject ?? "",
+        input.grade ?? "",
+        input.subjectCode ?? "",
+        input.isbn ?? "",
       );
       if (result.__kind__ === "err") throw new Error(result.err);
       return canisterBookToBook(result.ok);
@@ -1136,6 +1146,10 @@ export function useUpdateBook() {
       edition,
       publisher,
       category,
+      subject,
+      grade,
+      subjectCode,
+      isbn,
       quantity,
       availableCount,
     }: {
@@ -1145,6 +1159,10 @@ export function useUpdateBook() {
       edition: string;
       publisher: string;
       category: string;
+      subject?: string;
+      grade?: string;
+      subjectCode?: string;
+      isbn?: string;
       quantity: bigint | number;
       availableCount: bigint | number;
     }) => {
@@ -1161,6 +1179,10 @@ export function useUpdateBook() {
         category,
         BigInt(quantity),
         BigInt(availableCount),
+        subject ?? "",
+        grade ?? "",
+        subjectCode ?? "",
+        isbn ?? "",
       );
       if (result.__kind__ === "err") throw new Error(result.err);
       return canisterBookToBook(result.ok);
@@ -1229,8 +1251,12 @@ export function useImportBooksFromCsv() {
         edition: r.edition ?? "",
         publisher: r.publisher ?? "",
         category: r.category ?? "",
-        totalCopies: BigInt(r.quantity ?? 1),
-        availableCopies: BigInt(r.quantity ?? 1),
+        subject: r.subject ?? "",
+        grade: r.grade ?? "",
+        subjectCode: r.subjectCode ?? "",
+        isbn: r.isbn ?? "",
+        totalCopies: BigInt(r.totalCopies ?? r.quantity ?? 1),
+        availableCopies: BigInt(r.availableCopies ?? r.available ?? r.quantity ?? 1),
       }));
       const result = await actor.importBooksFromCsv(adminToken, canisterRows);
       if (result.__kind__ === "err") throw new Error(result.err);

@@ -2,7 +2,15 @@ const Book = require('../models/Book');
 
 const getBooks = async (req, res) => {
   try {
-    const { search, category, course, page = 1, limit = 50 } = req.query;
+    const {
+      search,
+      category,
+      course,
+      grade,
+      isbn,
+      page = 1,
+      limit = 50,
+    } = req.query;
     const filter = {};
 
     if (search) {
@@ -10,10 +18,15 @@ const getBooks = async (req, res) => {
         { title: { $regex: search, $options: 'i' } },
         { author: { $regex: search, $options: 'i' } },
         { publisher: { $regex: search, $options: 'i' } },
+        { category: { $regex: search, $options: 'i' } },
+        { subject: { $regex: search, $options: 'i' } },
+        { isbn: { $regex: search, $options: 'i' } },
       ];
     }
     if (category) filter.category = category;
     if (course) filter.category = course;
+    if (grade) filter.grade = grade;
+    if (isbn) filter.isbn = isbn;
 
     const skip = (Number(page) - 1) * Number(limit);
     const [books, total] = await Promise.all([
@@ -21,7 +34,13 @@ const getBooks = async (req, res) => {
       Book.countDocuments(filter),
     ]);
 
-    return res.json({ success: true, books, total, page: Number(page), limit: Number(limit) });
+    return res.json({
+      success: true,
+      books,
+      total,
+      page: Number(page),
+      limit: Number(limit),
+    });
   } catch (err) {
     console.error('[Books] GetBooks error:', err);
     return res.status(500).json({ success: false, message: err.message });
@@ -53,12 +72,37 @@ const getBookById = async (req, res) => {
 
 const createBook = async (req, res) => {
   try {
-    const { title, author, edition, publisher, category, quantity } = req.body;
+    const {
+      title,
+      author,
+      edition,
+      publisher,
+      category,
+      shelf,
+      subject,
+      grade,
+      subjectCode,
+      isbn,
+      quantity,
+    } = req.body;
     if (!title || !author) {
       return res.status(400).json({ success: false, message: 'Title and author are required' });
     }
     const qty = Number(quantity) || 1;
-    const book = await Book.create({ title, author, edition, publisher, category, quantity: qty, availableQuantity: qty });
+    const book = await Book.create({
+      title,
+      author,
+      edition: edition || '',
+      publisher: publisher || '',
+      category: category || 'General',
+      shelf: shelf || '',
+      subject: subject || '',
+      grade: grade || '',
+      subjectCode: subjectCode || '',
+      isbn: isbn || undefined,
+      quantity: qty,
+      availableQuantity: qty,
+    });
     return res.status(201).json({ success: true, book });
   } catch (err) {
     console.error('[Books] CreateBook error:', err);
@@ -68,7 +112,39 @@ const createBook = async (req, res) => {
 
 const updateBook = async (req, res) => {
   try {
-    const book = await Book.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const {
+      title,
+      author,
+      edition,
+      publisher,
+      category,
+      shelf,
+      subject,
+      grade,
+      subjectCode,
+      isbn,
+      quantity,
+      availableQuantity,
+    } = req.body;
+    const qty = Number(quantity) || 1;
+    const available = Number(availableQuantity) || qty;
+    const book = await Book.findByIdAndUpdate(
+      req.params.id,
+      {
+        title,
+        author,
+        edition: edition || '',
+        publisher: publisher || '',
+        category: category || 'General',
+        subject: subject || '',
+        grade: grade || '',
+        subjectCode: subjectCode || '',
+        isbn: isbn || undefined,
+        quantity: qty,
+        availableQuantity: Math.min(available, qty),
+      },
+      { new: true },
+    );
     if (!book) return res.status(404).json({ success: false, message: 'Book not found' });
     return res.json({ success: true, book });
   } catch (err) {

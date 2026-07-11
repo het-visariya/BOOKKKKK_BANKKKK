@@ -90,11 +90,16 @@ export interface Book {
   _id: string;
   /** Legacy alias */
   bookId?: string;
+  shelf?: string;
   title: string;
   author: string;
   edition?: string;
   publisher?: string;
   category: string;
+  subject?: string;
+  grade?: string;
+  subjectCode?: string;
+  isbn?: string;
   quantity: number;
   availableQuantity: number;
   /** Legacy alias */
@@ -105,20 +110,32 @@ export interface Book {
 export interface BookInput {
   title: string;
   author: string;
-  edition: string;
-  publisher: string;
-  category: string;
+  edition?: string;
+  publisher?: string;
+  category?: string;
+  shelf?: string;
+  subject?: string;
+  grade?: string;
+  subjectCode?: string;
+  isbn?: string;
   quantity: number;
 }
 
 export interface BookCsvRow {
+  shelf?: string;
   title: string;
   author: string;
   edition?: string;
   publisher?: string;
   category?: string;
+  subject?: string;
+  grade?: string;
+  subjectCode?: string;
+  isbn?: string;
   quantity?: number;
   available?: number;
+  totalCopies?: number;
+  availableCopies?: number;
 }
 
 export interface CsvImportResult {

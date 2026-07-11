@@ -78,6 +78,11 @@ function mongoBookToCanister(book: Record<string, unknown>) {
     edition: String(book.edition ?? ""),
     publisher: String(book.publisher ?? ""),
     category: String(book.category ?? "General"),
+    shelf: String(book.shelf ?? ""),
+    subject: String(book.subject ?? ""),
+    grade: String(book.grade ?? ""),
+    subjectCode: String(book.subjectCode ?? ""),
+    isbn: String(book.isbn ?? ""),
     quantity: BigInt(Number(book.quantity ?? 1)),
     availableCount: BigInt(
       Number(book.availableQuantity ?? book.availableCount ?? book.quantity ?? 1),
@@ -441,6 +446,10 @@ export const restBackend = {
     publisher: string,
     category: string,
     quantity: bigint,
+    subject: string,
+    grade: string,
+    subjectCode: string,
+    isbn: string,
   ) {
     try {
       const data = await request<{ book: Record<string, unknown> }>("/api/books", {
@@ -452,6 +461,10 @@ export const restBackend = {
           edition,
           publisher,
           category,
+          subject,
+          grade,
+          subjectCode,
+          isbn,
           quantity: Number(quantity),
         }),
       });
@@ -471,6 +484,10 @@ export const restBackend = {
     category: string,
     quantity: bigint,
     availableCount: bigint,
+    subject: string,
+    grade: string,
+    subjectCode: string,
+    isbn: string,
   ) {
     try {
       const data = await request<{ book: Record<string, unknown> }>(
@@ -484,6 +501,10 @@ export const restBackend = {
             edition,
             publisher,
             category,
+            subject,
+            grade,
+            subjectCode,
+            isbn,
             quantity: Number(quantity),
             availableQuantity: Number(availableCount),
           }),
@@ -546,7 +567,12 @@ export const restBackend = {
             edition: r.edition,
             publisher: r.publisher,
             category: r.category,
-            quantity: Number(r.totalCopies ?? r.quantity ?? 1),
+            subject: r.subject,
+            grade: r.grade,
+            subjectCode: r.subjectCode,
+            isbn: r.isbn,
+            totalCopies: Number(r.totalCopies ?? r.quantity ?? 1),
+            availableCopies: Number(r.availableCopies ?? r.available ?? r.quantity ?? 1),
           })),
         }),
       });

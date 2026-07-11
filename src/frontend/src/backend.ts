@@ -54,6 +54,10 @@ export interface Book {
   edition: string;
   publisher: string;
   category: string;
+  subject?: string;
+  grade?: string;
+  subjectCode?: string;
+  isbn?: string;
   quantity: bigint | number;
   availableCount: bigint | number;
   availableQuantity: bigint | number;

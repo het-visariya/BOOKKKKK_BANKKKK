@@ -282,6 +282,28 @@
       transform: translateY(0);
     }
   }
+
+  @keyframes marquee-left {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .marquee-wrapper {
+    position: relative;
+  }
+
+  .marquee-track {
+    animation: marquee-left 22s linear infinite;
+  }
+
+  .marquee-track:hover {
+    animation-play-state: paused;
+  }
+
   @keyframes slideInLeft {
     from {
       opacity: 0;
