@@ -2,7 +2,9 @@ const path = require('path');
 const dotenv = require('dotenv');
 const mongoose = require('mongoose');
 const dns = require('dns').promises;
-const { MongoMemoryServer } = require('mongodb-memory-server');
+
+// Only import in development
+const MongoMemoryServer = process.env.NODE_ENV !== 'production' ? require('mongodb-memory-server').MongoMemoryServer : null;
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -82,6 +84,16 @@ const connectDB = async () => {
     }
 
     try {
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[DB] Cannot connect to MongoDB in production. Exiting.');
+        process.exit(1);
+      }
+
+      if (!MongoMemoryServer) {
+        console.error('[DB] In-memory MongoDB not available');
+        process.exit(1);
+      }
+
       memoryServer = await MongoMemoryServer.create();
       const memoryUri = memoryServer.getUri();
       await mongoose.connect(memoryUri, { serverSelectionTimeoutMS: 3000 });
@@ -90,11 +102,7 @@ const connectDB = async () => {
     } catch (memoryError) {
       console.error('[DB] In-memory MongoDB fallback failed:');
       console.error(memoryError.message);
-      if (process.env.NODE_ENV === 'production') {
-        process.exit(1);
-      }
-      console.warn('[DB] Continuing without MongoDB in non-production mode');
-      return false;
+      process.exit(1);
     }
   }
 };

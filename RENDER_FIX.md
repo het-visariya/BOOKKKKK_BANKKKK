@@ -22,7 +22,7 @@ This error typically means:
 1. Go to Service Settings
 2. Verify these settings:
    ```
-   Build Command: npm install
+   Build Command: npm ci --omit=dev
    Start Command: npm start
    ```
 3. In **Environment** tab, add these variables:

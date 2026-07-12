@@ -20,7 +20,7 @@
 3. Configure:
    - **Name:** svga-book-bank-api
    - **Environment:** Node
-   - **Build Command:** `npm install`
+   - **Build Command:** `npm ci --omit=dev`
    - **Start Command:** `npm start`
    - **Root Directory:** `server`
 
