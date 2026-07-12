@@ -4,9 +4,11 @@
  */
 import type { Backend } from "@/backend";
 
+const DEFAULT_API_BASE = "https://svga-book-bank-api.onrender.com";
+
 const API_BASE =
   (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
-  "";
+  DEFAULT_API_BASE;
 
 
 function ok<T>(value: T): { __kind__: "ok"; ok: T } {

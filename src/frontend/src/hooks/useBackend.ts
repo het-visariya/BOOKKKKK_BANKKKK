@@ -475,8 +475,10 @@ export function useSendOtp() {
       phone?: string;
       type?: "sms";
     }) => {
-      const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-      
+      const baseUrl =
+        (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
+        "https://svga-book-bank-api.onrender.com";
+
       const response = await fetch(`${baseUrl}/api/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -509,8 +511,10 @@ export function useVerifyOtpAndLogin() {
       otp: string;
       type?: "sms";
     }) => {
-      const baseUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
-      
+      const baseUrl =
+        (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
+        "https://svga-book-bank-api.onrender.com";
+
       const response = await fetch(`${baseUrl}/api/auth/otp/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
