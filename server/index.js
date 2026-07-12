@@ -71,7 +71,7 @@ const start = async () => {
   const port = await getPort(PORT);
   app.listen(port, '0.0.0.0', () => {
     console.log(`[Server] SVGA Book Bank API running on port ${port}`);
-    console.log(`[Server] Made by Devansh Nisar, Het Visariya & Trish Shah --- Haaland`);
+    console.log(`[Server] Made by Devansh Nisar, Het Visariya & Trish Shah`);
   });
 };
 
