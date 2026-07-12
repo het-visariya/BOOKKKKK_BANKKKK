@@ -5,6 +5,24 @@ const { v4: uuidv4 } = require('uuid');
 
 const normalizeIdentityValue = (value = '') => String(value).replace(/\D/g, '').trim();
 
+const demoOtpStore = new Map();
+
+const generateDemoOtp = () => Math.floor(1000 + (Math.random() * 9000)).toString();
+
+const saveDemoOtp = (phone, otp) => {
+  demoOtpStore.set(phone, { otp, expiresAt: Date.now() + 5 * 60 * 1000 });
+};
+
+const getStoredDemoOtp = (phone) => {
+  const entry = demoOtpStore.get(phone);
+  if (!entry) return null;
+  if (entry.expiresAt < Date.now()) {
+    demoOtpStore.delete(phone);
+    return null;
+  }
+  return entry.otp;
+};
+
 const findStudentByIdentity = async ({ aadhaarNumber, phone }) => {
   const cleanAadhaar = normalizeIdentityValue(aadhaarNumber);
   const cleanPhone = normalizeIdentityValue(phone);
@@ -294,10 +312,13 @@ const sendOtp = async (req, res) => {
     const countryCode = process.env.MSG91_COUNTRY_CODE?.trim() || '91';
 
     if (!msg91ApiKey || !msg91TemplateId) {
-      console.error('[Auth] MSG91 is not configured. Missing API key or template ID.');
-      return res.status(500).json({
-        success: false,
-        message: 'SMS service is not configured. Please contact the administrator.',
+      const demoOtp = generateDemoOtp();
+      saveDemoOtp(cleanPhone, demoOtp);
+      console.log('[Auth] MSG91 is not configured. Using demo OTP:', demoOtp);
+      return res.json({
+        success: true,
+        message: `Demo OTP generated for +${countryCode}${cleanPhone}`,
+        demoOtp,
       });
     }
 
@@ -350,14 +371,17 @@ const verifyOtp = async (req, res) => {
     const countryCode = process.env.MSG91_COUNTRY_CODE?.trim() || '91';
 
     if (!msg91ApiKey) {
-      console.error('[Auth] MSG91 API key is not configured.');
-      return res.status(500).json({
-        success: false,
-        message: 'SMS service is not configured. Please contact the administrator.',
-      });
-    }
-
-    if (cleanOtp.length !== 4) {
+      const storedOtp = getStoredDemoOtp(cleanPhone);
+      if (storedOtp && storedOtp === cleanOtp) {
+        demoOtpStore.delete(cleanPhone);
+        console.log('[Auth] Demo OTP verified successfully for:', cleanPhone);
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid or expired OTP. Please try again.',
+        });
+      }
+    } else if (cleanOtp.length !== 4) {
       return res.status(400).json({
         success: false,
         message: 'OTP must be 4 digits',

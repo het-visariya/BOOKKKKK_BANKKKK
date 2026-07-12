@@ -1,4 +1,4 @@
-import { BrandingFooter, LOGO_SRC, SVGALogo } from "@/components/layout/AppLayout";
+import { BrandingFooter, getLogoSrc, SVGALogo } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getStudentSession, setStudentSession } from "@/hooks/useAuth";
@@ -89,7 +89,7 @@ export function PaymentSuccessPage() {
               <div className="h-20 w-20 rounded-full border-4 border-[#B8E0E8] border-t-[#5AC8D8] animate-spin" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <img
-                  src={LOGO_SRC}
+                  src={getLogoSrc("default")}
                   alt="SVGA Book Bank"
                   className="h-10 w-10 rounded-full object-contain"
                 />

@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getLogoSrc } from "@/components/layout/AppLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useGetStudentProfile } from "@/hooks/useBackend";
 import type { IssuedBookInfo, ReturnUrgency } from "@/types";
@@ -301,7 +302,7 @@ export function StudentProfilePage() {
         >
           <div className="flex items-center gap-3">
             <img
-              src={LOGO_SRC}
+              src={getLogoSrc("navbar")}
               alt="SVGA Book Bank"
               className="h-12 w-12 rounded-full object-cover border-2 border-white/40 flex-shrink-0 shadow-md"
             />

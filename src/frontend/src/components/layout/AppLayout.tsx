@@ -77,6 +77,11 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 }
 
 export const LOGO_SRC = "/assets/svga-logo.png";
+export const LOGO_SRC_WHITE = "/assets/svga-logo-white.png";
+
+export function getLogoSrc(variant: "default" | "navbar" = "default") {
+  return variant === "navbar" ? LOGO_SRC_WHITE : LOGO_SRC;
+}
 
 /** SVGA Logo — transparent PNG, no circular cropping, deep blue navbar aware */
 export function SVGALogo({
@@ -105,7 +110,7 @@ export function SVGALogo({
   return (
     <div className="flex items-center gap-2.5">
       <img
-        src={LOGO_SRC}
+        src={getLogoSrc(isNavbar ? "navbar" : "default")}
         alt="SVGA Book Bank"
         className={`${imgSizes[size]} object-contain shrink-0`}
       />

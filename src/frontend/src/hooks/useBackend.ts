@@ -489,7 +489,7 @@ export function useSendOtp() {
       }
 
       const data = await response.json();
-      return { success: data.success, message: data.message };
+      return { success: data.success, message: data.message, demoOtp: data.demoOtp };
     },
   });
 }

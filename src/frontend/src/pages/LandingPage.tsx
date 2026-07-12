@@ -1,10 +1,14 @@
 import { type MouseEvent, useEffect, useRef, useState } from "react";
-import { BrandingFooter, LOGO_SRC, SVGALogo } from "@/components/layout/AppLayout";
+import { BrandingFooter, getLogoSrc } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { useAdminAuth, useStudentAuth } from "@/hooks/useAuth";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, BookOpen, Clock, Mail, MapPin, Menu, Phone, Shield, Smile, User, Wallet, X, Zap } from "lucide-react";
+import sponsor1 from "@/assets/sponsors/sponsor1.png";
+import sponsor2 from "@/assets/sponsors/sponsor2.png";
+import sponsor3 from "@/assets/sponsors/sponsor3.png";
+import sponsor4 from "@/assets/sponsors/sponsor4.png";
 
 const navItems = [
   { label: "Sponsors", href: "#sponsors" },
@@ -58,7 +62,12 @@ const timelineSteps = [
   },
 ];
 
-const sponsorPlaceholders = Array.from({ length: 6 }, (_, index) => index);
+const sponsors = [
+  { src: sponsor1, alt: "Sponsor Poster 1" },
+  { src: sponsor2, alt: "Sponsor Poster 2" },
+  { src: sponsor3, alt: "Sponsor Poster 3" },
+  { src: sponsor4, alt: "Sponsor Poster 4" },
+];
 
 const testimonials = [
   {
@@ -90,25 +99,17 @@ const fadeUp = {
   },
 };
 
-function SponsorCard() {
+function SponsorCard({ src, alt }: { src: string; alt: string }) {
   return (
     <motion.div
       whileHover={{ y: -10, scale: 1.03 }}
       transition={{ duration: 0.35, ease: "easeOut" }}
-      className="group relative flex h-[178px] min-w-[280px] flex-col items-center justify-center overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_45px_-30px_rgba(15,23,42,0.08)] transition duration-300 ease-out hover:border-cyan-400/80 hover:shadow-[0_22px_60px_-26px_rgba(15,23,42,0.18)]"
+      className="group relative flex h-[178px] min-w-[280px] items-center justify-center overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_45px_-30px_rgba(15,23,42,0.08)] transition duration-300 ease-out hover:border-cyan-400/80 hover:shadow-[0_22px_60px_-26px_rgba(15,23,42,0.18)]"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-cyan-100/40 via-transparent to-transparent opacity-0 transition duration-300 group-hover:opacity-100" />
       <div className="relative z-10 flex h-full w-full items-center justify-center px-6">
-        <div className="flex h-24 w-full max-w-[220px] flex-col items-center justify-center rounded-[22px] border border-dashed border-slate-300/70 bg-slate-50/70">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full border border-slate-300/70 bg-white text-slate-400 shadow-sm">
-            <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
-          </div>
-          <p className="mt-3 text-center text-sm font-medium uppercase tracking-[0.28em] text-slate-400">
-            logo
-          </p>
+        <div className="flex h-full w-full items-center justify-center rounded-[22px] border border-slate-200/70 bg-slate-50/70 p-5">
+          <img src={src} alt={alt} className="max-h-[140px] max-w-full object-contain" />
         </div>
       </div>
     </motion.div>
@@ -159,7 +160,7 @@ function TimelineStep({ number, title, description, Icon }: { number: string; ti
 
 function LocationCard() {
   return (
-    <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
+    <div className="rounded-[32px] border border-white/70 bg-white p-6 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.12)]">
       <div className="mb-5">
         <p className="text-xs uppercase tracking-[0.3em] text-[#0B5E78]">Our Location</p>
         <h3 className="mt-4 text-3xl font-display font-bold text-slate-950">Our Location</h3>
@@ -167,9 +168,9 @@ function LocationCard() {
       </div>
 
       <div className="space-y-3">
-        <div className="rounded-[24px] bg-[#F8FBFF] p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
+        <div className="rounded-[24px] bg-slate-50 p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
           <div className="flex items-start gap-4">
-            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F4F8] text-[#0B5E78]">
+            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-[#0B5E78]">
               <MapPin className="h-5 w-5" />
             </div>
             <div>
@@ -179,9 +180,9 @@ function LocationCard() {
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-[#F8FBFF] p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
+        <div className="rounded-[24px] bg-slate-50 p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
           <div className="flex items-start gap-4">
-            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F4F8] text-[#0B5E78]">
+            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-[#0B5E78]">
               <Phone className="h-5 w-5" />
             </div>
             <div>
@@ -191,9 +192,9 @@ function LocationCard() {
           </div>
         </div>
 
-        <div className="rounded-[24px] bg-[#F8FBFF] p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
+        <div className="rounded-[24px] bg-slate-50 p-4 shadow-[0_18px_48px_-28px_rgba(11,94,120,0.08)]">
           <div className="flex items-start gap-4">
-            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#E8F4F8] text-[#0B5E78]">
+            <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-[#0B5E78]">
               <Clock className="h-5 w-5" />
             </div>
             <div>
@@ -286,16 +287,23 @@ export function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col overflow-x-hidden bg-[#F4FBFF] text-[#0c2340]">
+    <div className="relative min-h-screen flex flex-col overflow-x-hidden text-[#0c2340] bg-white">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[56vh]"
+        style={{
+          background: "linear-gradient(180deg, #061B4D 0%, #082766 10%, #0F3F96 20%, #1F67D8 32%, #5FAEFF 48%, rgba(191,232,255,0.78) 60%, rgba(234,248,255,0.5) 70%, rgba(247,251,255,0.22) 82%, transparent 100%)",
+        }}
+      />
       <motion.header
         initial={{ opacity: 0, y: -23 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className={`fixed inset-x-0 top-5 z-50 mx-4 md:mx-6 lg:mx-8 xl:mx-10 2xl:mx-12 border border-white/30 bg-white/90 backdrop-blur-[22px] transition-all duration-300 ease-in-out ${
+        className={`fixed inset-x-0 top-5 z-50 mx-4 md:mx-6 lg:mx-8 xl:mx-10 2xl:mx-12 transition-all duration-300 ease-in-out rounded-[24px] ${
           scrolled
-            ? "bg-white/95 backdrop-blur-[24px] shadow-[0_22px_60px_rgba(15,23,42,0.12)] py-2.5"
-            : "shadow-[0_18px_45px_rgba(15,23,42,0.08)] py-3.5"
-        } rounded-[24px]`}
+            ? "border bg-[rgba(255,255,255,0.93)] backdrop-blur-[18px] shadow-[0_12px_40px_rgba(8,30,90,0.08)] py-2.5"
+            : "border bg-[rgba(255,255,255,0.93)] backdrop-blur-[18px] shadow-[0_12px_40px_rgba(8,30,90,0.08)] py-3.5"
+        }`}
+        style={{ borderColor: "rgba(255,255,255,0.35)" }}
         aria-label="Primary navigation"
       >
         <div className="mx-auto flex max-w-[1520px] items-center justify-between px-4 sm:px-6 md:px-10 lg:px-12 xl:px-14">
@@ -306,7 +314,7 @@ export function LandingPage() {
               className="inline-flex items-center gap-3"
             >
               <img
-                src={LOGO_SRC}
+                src={getLogoSrc("default")}
                 alt="SVGA logo"
                 className={`h-12 w-auto transition-transform duration-300 ${scrolled ? "scale-[0.96]" : "scale-100"}`}
               />
@@ -442,21 +450,23 @@ export function LandingPage() {
       </motion.header>
 
       <main className="flex-1 pt-[104px]">
-        <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(90,200,216,0.16),_transparent_30%)] pt-8 pb-12 sm:pt-10 sm:pb-14">
-          <div className="absolute inset-x-0 top-0 h-56 bg-[radial-gradient(circle,_rgba(255,255,255,0.78),transparent_70%)] opacity-70 blur-2xl pointer-events-none" />
-          <div className="absolute left-10 top-16 h-40 w-40 rounded-full bg-[#7ED5E3]/30 blur-3xl opacity-40 pointer-events-none" />
-          <div className="absolute right-0 top-24 h-48 w-48 rounded-full bg-[#B5E0E8]/25 blur-3xl opacity-30 pointer-events-none" />
+        <section className="relative pt-8 pb-12 sm:pt-10 sm:pb-14">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid gap-7 lg:grid-cols-[1.05fr_0.95fr] items-center">
               <motion.div initial="hidden" animate="visible" variants={staggerContainer}>
                 <motion.div variants={fadeUp} className="flex justify-center">
-                  <div className="inline-flex rounded-full border border-white/90 bg-white/70 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#0B5E78] shadow-[0_10px_30px_-18px_rgba(15,23,42,0.15)] backdrop-blur-md">
+                  <div className="inline-flex rounded-full border border-white/90 bg-white px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.28em] text-[#0B5E78] shadow-[0_10px_30px_-18px_rgba(15,23,42,0.15)]">
                     Trusted by SVGA students
                   </div>
                 </motion.div>
                 <motion.h1 variants={fadeUp} className="mt-6 max-w-[700px] text-center text-[36px] font-extrabold tracking-[-0.03em] leading-[0.96] text-[#0F172A] sm:text-[46px] md:text-[52px] lg:text-[64px] xl:text-[72px]">
-                  <span className="block font-display text-[#0C2340]">SVGA</span>
-                  <span className="block bg-gradient-to-r from-[#07738F] via-[#0B86A7] to-[#0B9BCB] bg-clip-text text-transparent">Book Bank</span>
+                  <span className="inline-flex items-center justify-center gap-3">
+                    <img src={getLogoSrc("default")} alt="SVGA logo" className="h-20 w-auto shrink-0 sm:h-22 md:h-24" />
+                    <span className="flex flex-col items-start text-left leading-none">
+                      <span className="block font-display text-[#0C2340]">SVGA</span>
+                      <span className="block bg-gradient-to-r from-[#07738F] via-[#0B86A7] to-[#0B9BCB] bg-clip-text text-transparent">Book Bank</span>
+                    </span>
+                  </span>
                 </motion.h1>
                 <motion.p variants={fadeUp} className="mt-3 max-w-[700px] text-center text-[16px] leading-[1.7] text-[#334155] sm:text-[18px] lg:text-[22px] mx-auto">
                   Get free books for your studies — register, pay a refundable ₹500 deposit, and take home any books you want.
@@ -482,15 +492,15 @@ export function LandingPage() {
                 </motion.div>
 
                 <motion.div variants={fadeUp} className="mt-10 grid gap-4 sm:grid-cols-3">
-                  <div className="rounded-[1.75rem] border border-[#D7EFF6] bg-white/85 p-6 shadow-[0_24px_60px_-40px_rgba(11,94,120,0.16)] backdrop-blur-sm">
+                  <div className="rounded-[1.75rem] border border-[#D7EFF6] bg-white p-6 shadow-[0_24px_60px_-40px_rgba(11,94,120,0.16)]">
                     <p className="text-3xl font-display font-semibold">2,000+</p>
                     <p className="mt-2 text-sm text-[#4f6b78]">Books available across streams</p>
                   </div>
-                  <div className="rounded-[1.75rem] border border-[#D7EFF6] bg-white/85 p-6 shadow-[0_24px_60px_-40px_rgba(11,94,120,0.16)] backdrop-blur-sm">
+                  <div className="rounded-[1.75rem] border border-[#D7EFF6] bg-white p-6 shadow-[0_24px_60px_-40px_rgba(11,94,120,0.16)]">
                     <p className="text-3xl font-display font-semibold">₹500</p>
                     <p className="mt-2 text-sm text-[#4f6b78]">Fully refundable deposit</p>
                   </div>
-                  <div className="rounded-[1.75rem] border border-[#D7EFF6] bg-white/85 p-6 shadow-[0_24px_60px_-40px_rgba(11,94,120,0.16)] backdrop-blur-sm">
+                  <div className="rounded-[1.75rem] border border-[#D7EFF6] bg-white p-6 shadow-[0_24px_60px_-40px_rgba(11,94,120,0.16)]">
                     <p className="text-3xl font-display font-semibold">3 books</p>
                     <p className="mt-2 text-sm text-[#4f6b78]">Borrow per membership</p>
                   </div>
@@ -506,7 +516,7 @@ export function LandingPage() {
                 <motion.div
                   animate={{ y: [0, -4, 0] }}
                   transition={{ duration: 6, ease: "easeInOut", repeat: Infinity }}
-                  className="rounded-[2.5rem] border border-white/80 bg-white/92 p-8 shadow-[0_30px_90px_-48px_rgba(15,23,42,0.2)] backdrop-blur-xl"
+                  className="rounded-[2.5rem] border border-white/80 bg-white p-8 shadow-[0_30px_90px_-48px_rgba(15,23,42,0.2)]"
                 >
                   <div className="flex items-center justify-between gap-4 mb-8">
                     <div>
@@ -518,37 +528,36 @@ export function LandingPage() {
                     </div>
                   </div>
                   <div className="space-y-5">
-                    <div className="rounded-[2rem] bg-[#F4FBFF] p-6 border border-[#D7EFF6] shadow-sm">
+                    <div className="rounded-[2rem] bg-white p-6 border border-[#E8EDF5] shadow-sm">
                       <p className="text-sm font-semibold text-[#0c2340]">Reserve instantly</p>
                       <p className="mt-2 text-sm text-[#4f6b78] leading-relaxed">Find books by stream, author, or category without any wait.</p>
                     </div>
-                    <div className="rounded-[2rem] bg-[#F8F8FF] p-6 border border-[#E3EAF3] shadow-sm">
+                    <div className="rounded-[2rem] bg-white p-6 border border-[#E8EDF5] shadow-sm">
                       <p className="text-sm font-semibold text-[#0c2340]">Deposit protection</p>
                       <p className="mt-2 text-sm text-[#4f6b78] leading-relaxed">Fully refundable after every return, with clear status updates.</p>
                     </div>
                   </div>
                 </motion.div>
-                <div className="absolute -bottom-8 left-1/2 h-24 w-24 -translate-x-1/2 rounded-full bg-gradient-to-br from-[#5AC8D8] to-[#88D4E0] opacity-50 blur-3xl" />
               </motion.div>
             </div>
           </div>
         </section>
 
-        <section id="sponsors" className="py-20 bg-[#F7FBFF]">
+        <section id="sponsors" className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mx-auto max-w-2xl mb-12">
-              <span className="inline-flex rounded-full bg-[#E8F4F8] px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#0B5E78]">
+              <span className="inline-flex rounded-full bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#0B5E78]">
                 Trusted by our future partners
               </span>
               <h2 className="mt-6 text-3xl md:text-4xl font-display font-bold text-slate-950">
                 Our Generous Sponsors
               </h2>
             </motion.div>
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="overflow-hidden rounded-[28px] bg-white/80 p-4 shadow-[0_20px_70px_-40px_rgba(15,23,42,0.1)]">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="overflow-hidden rounded-[28px] bg-white p-4 shadow-[0_20px_70px_-40px_rgba(15,23,42,0.1)]">
               <div className="marquee-wrapper overflow-hidden">
                 <div className="marquee-track flex items-center gap-8">
-                  {[...sponsorPlaceholders, ...sponsorPlaceholders].map((_, index) => (
-                    <SponsorCard key={index} />
+                  {[...sponsors, ...sponsors].map((sponsor, index) => (
+                    <SponsorCard key={`${sponsor.alt}-${index}`} src={sponsor.src} alt={sponsor.alt} />
                   ))}
                 </div>
               </div>
@@ -556,10 +565,10 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="features" className="py-20">
+        <section id="features" className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mx-auto max-w-2xl mb-14">
-              <span className="inline-flex rounded-full bg-[#E8F4F8] px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#0B5E78]">
+              <span className="inline-flex rounded-full bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-[#0B5E78]">
                 Why SVGA Book Bank
               </span>
               <h2 className="mt-6 text-3xl md:text-4xl font-display font-bold">Smooth membership, stronger support.</h2>
@@ -568,21 +577,21 @@ export function LandingPage() {
 
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-60px" }} variants={staggerContainer} className="grid gap-6 md:grid-cols-3">
               <motion.div variants={fadeUp} className="rounded-[2rem] bg-white p-8 border border-[#D7EFF6] shadow-subtle">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-[#E8F4F8] text-[#0B5E78]">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-slate-50 text-[#0B5E78]">
                   <BookOpen className="h-6 w-6" />
                 </div>
                 <h3 className="mt-6 text-xl font-semibold">Stream-aligned collections</h3>
                 <p className="mt-3 text-sm text-[#4f6b78] leading-relaxed">From FYJC to engineering, discover books selected for your stream.</p>
               </motion.div>
               <motion.div variants={fadeUp} className="rounded-[2rem] bg-white p-8 border border-[#D7EFF6] shadow-subtle">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-[#E8F4F8] text-[#0B5E78]">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-slate-50 text-[#0B5E78]">
                   <Zap className="h-6 w-6" />
                 </div>
                 <h3 className="mt-6 text-xl font-semibold">Fast, modern search</h3>
                 <p className="mt-3 text-sm text-[#4f6b78] leading-relaxed">Reserve textbooks quickly using smart search and effortless filtering.</p>
               </motion.div>
               <motion.div variants={fadeUp} className="rounded-[2rem] bg-white p-8 border border-[#D7EFF6] shadow-subtle">
-                <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-[#E8F4F8] text-[#0B5E78]">
+                <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-slate-50 text-[#0B5E78]">
                   <Shield className="h-6 w-6" />
                 </div>
                 <h3 className="mt-6 text-xl font-semibold">Secure refundable deposit</h3>
@@ -592,7 +601,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="how-it-works" className="py-24 bg-[#F8FBFD]">
+        <section id="how-it-works" className="py-24 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="mx-auto mb-14 max-w-2xl text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold text-slate-950">How It Works</h2>
@@ -601,7 +610,7 @@ export function LandingPage() {
               </p>
             </motion.div>
 
-            <div className="relative overflow-hidden rounded-[36px] border border-white/60 bg-white/80 p-6 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-10">
+            <div className="relative overflow-hidden rounded-[36px] border border-white/60 bg-white p-6 shadow-[0_30px_80px_-45px_rgba(15,23,42,0.12)] sm:p-10">
               <motion.div
                 initial={{ opacity: 0, scaleX: 0 }}
                 whileInView={{ opacity: 1, scaleX: 1 }}
@@ -628,10 +637,10 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="feedback" className="py-20 bg-[#F8FBFD]">
+        <section id="feedback" className="py-20 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mx-auto max-w-2xl mb-12">
-              <span className="inline-flex rounded-full bg-[#E8F4F8] px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#0B5E78]">
+              <span className="inline-flex rounded-full bg-slate-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#0B5E78]">
                 Hear from students who trusted SVGA.
               </span>
               <h2 className="mt-6 text-3xl md:text-4xl font-display font-bold text-slate-950">Hear from students who trusted SVGA.</h2>
@@ -646,7 +655,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="location" className="py-24 bg-[#F8FBFD]">
+        <section id="location" className="py-24 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="mx-auto mb-14 max-w-2xl text-center">
               <h2 className="text-3xl md:text-4xl font-display font-bold text-slate-950">Visit Our Book Bank</h2>

@@ -82,6 +82,9 @@ export function LoginPage() {
       });
       setShowOtpSent(true);
       setStep("otp");
+      if (result?.demoOtp) {
+        setOtp(result.demoOtp);
+      }
       toast.success(result?.message || "OTP sent successfully");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to send OTP";

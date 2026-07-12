@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { LOGO_SRC } from "@/components/layout/AppLayout";
+import { getLogoSrc } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -224,7 +224,7 @@ export function StudentQrPage() {
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-full shrink-0 border-2 border-white/40 shadow-md p-0.5 bg-white/90 overflow-hidden">
               <img
-                src={LOGO_SRC}
+                src={getLogoSrc("navbar")}
                 alt="SVGA Book Bank"
                 className="w-full h-full rounded-full object-contain"
               />
