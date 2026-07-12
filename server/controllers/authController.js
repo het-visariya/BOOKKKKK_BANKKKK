@@ -332,12 +332,9 @@ const sendOtp = async (req, res) => {
 
       if (!isSuccess) {
         console.error('[Auth] MSG91 send OTP failed:', data);
-        const demoOtp = generateDemoOtp();
-        saveDemoOtp(cleanPhone, demoOtp);
-        return res.json({
-          success: true,
-          message: `SMS provider unavailable. Using demo OTP for +${countryCode}${cleanPhone}`,
-          demoOtp,
+        return res.status(502).json({
+          success: false,
+          message: data.message || 'Failed to send OTP via SMS provider',
         });
       }
 
@@ -349,12 +346,9 @@ const sendOtp = async (req, res) => {
       });
     } catch (err) {
       console.error('[Auth] MSG91 send OTP request crashed:', err);
-      const demoOtp = generateDemoOtp();
-      saveDemoOtp(cleanPhone, demoOtp);
-      return res.json({
-        success: true,
-        message: `SMS provider unavailable. Using demo OTP for +${countryCode}${cleanPhone}`,
-        demoOtp,
+      return res.status(502).json({
+        success: false,
+        message: 'Failed to send OTP via SMS provider',
       });
     }
   } catch (err) {
