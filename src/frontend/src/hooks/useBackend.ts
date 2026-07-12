@@ -477,7 +477,7 @@ export function useSendOtp() {
     }) => {
       const baseUrl =
         (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
-        "https://svga-book-bank-api.onrender.com";
+        "https://bookkkkk-bankkkk.onrender.com";
 
       const response = await fetch(`${baseUrl}/api/auth/otp/send`, {
         method: "POST",
@@ -513,7 +513,7 @@ export function useVerifyOtpAndLogin() {
     }) => {
       const baseUrl =
         (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, "") ||
-        "https://svga-book-bank-api.onrender.com";
+        "https://bookkkkk-bankkkk.onrender.com";
 
       const response = await fetch(`${baseUrl}/api/auth/otp/verify`, {
         method: "POST",
