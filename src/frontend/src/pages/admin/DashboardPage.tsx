@@ -1,23 +1,14 @@
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAdminAuth } from "@/hooks/useAuth";
 import {
   useAdminPendingCount,
   useAllRequests,
   useAnalyticsData,
-  useGetAdminNotifications,
-  useGetAdminUnreadCount,
   useGetAllProcurements,
   useGetBookLifecycleFlow,
   useGetCollectionQueue,
@@ -28,7 +19,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
-  Bell,
   BookMarked,
   BookMinus,
   BookOpen,
@@ -61,118 +51,6 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
-
-// ─── Notification Drawer ───────────────────────────────────────────
-
-function AdminNotificationDrawer() {
-  const [open, setOpen] = useState(false);
-  const { data: notifications } = useGetAdminNotifications();
-  const { data: unreadCount } = useGetAdminUnreadCount();
-
-  const displayNotifs = (notifications ?? []).slice(0, 20);
-  const count = unreadCount ?? 0;
-
-  const formatRelativeTime = (iso: string) => {
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60_000);
-    if (mins < 1) return "Just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    return new Date(iso).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-    });
-  };
-
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="sm"
-        className="relative gap-1.5 text-xs h-8"
-        onClick={() => setOpen(true)}
-        data-ocid="admin.notifications.open_modal_button"
-        aria-label="View notifications"
-      >
-        <Bell className="h-3.5 w-3.5" />
-        Notifications
-        {count > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
-            {count > 9 ? "9+" : count}
-          </span>
-        )}
-      </Button>
-
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent
-          className="w-full sm:max-w-md overflow-y-auto"
-          data-ocid="admin.notifications.dialog"
-        >
-          <SheetHeader className="mb-4">
-            <SheetTitle className="font-display flex items-center gap-2">
-              <Bell className="h-4 w-4" /> Admin Notifications
-              {count > 0 && (
-                <Badge variant="destructive" className="ml-1 text-xs">
-                  {count} unread
-                </Badge>
-              )}
-            </SheetTitle>
-          </SheetHeader>
-
-          {displayNotifs.length === 0 ? (
-            <div
-              className="flex flex-col items-center gap-3 py-16 text-center"
-              data-ocid="admin.notifications.empty_state"
-            >
-              <Bell className="h-10 w-10 text-muted-foreground/30" />
-              <p className="text-sm text-muted-foreground">
-                No notifications yet.
-              </p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[calc(100vh-120px)]">
-              <div className="space-y-2 pr-2">
-                {displayNotifs.map((notif, i) => (
-                  <div
-                    key={notif.id}
-                    className={`rounded-xl border p-3 text-sm transition-colors ${
-                      notif.isRead
-                        ? "bg-muted/30 border-border"
-                        : "bg-sky-50 border-sky-200"
-                    }`}
-                    data-ocid={`admin.notifications.item.${i + 1}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <p
-                        className={`font-semibold text-foreground text-sm leading-snug ${
-                          !notif.isRead ? "text-sky-900" : ""
-                        }`}
-                      >
-                        {notif.title}
-                      </p>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0 mt-0.5">
-                        {formatRelativeTime(notif.timestamp)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {notif.message}
-                    </p>
-                    {!notif.isRead && (
-                      <span className="inline-flex items-center gap-1 text-[10px] text-sky-600 font-semibold mt-1">
-                        • Unread
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          )}
-        </SheetContent>
-      </Sheet>
-    </>
-  );
-}
 
 // ─── Book Flow Overview ───────────────────────────────────────────────
 
@@ -396,33 +274,37 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  color,
+  gradient,
+  trend,
   loading,
 }: {
   label: string;
   value: number | bigint | undefined;
   icon: React.ElementType;
-  color: string;
+  gradient: string;
+  trend: string;
   loading?: boolean;
 }) {
   return (
-    <Card className="border-border">
+    <Card className="dashboard-card border border-slate-200/70 hover-lift transition-all duration-200">
       <CardContent className="p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground font-body">{label}</p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-500">{label}</p>
             {loading ? (
-              <Skeleton className="h-8 w-16 mt-1" />
+              <Skeleton className="h-10 w-24 mt-3" />
             ) : (
-              <p className="text-3xl font-display font-bold text-foreground mt-1">
+              <p className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">
                 {value !== undefined ? Number(value) : 0}
               </p>
             )}
+            <div className="mt-3 inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+              {trend}
+            </div>
           </div>
-          <div
-            className={`h-12 w-12 rounded-xl flex items-center justify-center ${color}`}
-          >
-            <Icon className="h-6 w-6" />
+
+          <div className={`shrink-0 h-14 w-14 rounded-[18px] flex items-center justify-center ${gradient}`}>
+            <Icon className="h-6 w-6 text-white" />
           </div>
         </div>
       </CardContent>
@@ -520,6 +402,13 @@ export function DashboardPage() {
 
   const loading = analyticsLoading;
 
+  const todayLabel = new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
   const totalStudents = analytics?.totalStudents;
   const totalBooks = analytics?.totalBooks;
   const pendingRequests = analytics?.pendingRequests;
@@ -531,6 +420,10 @@ export function DashboardPage() {
   const pendingProcurementsCount = (procurements ?? []).filter(
     (p) => p.status === "Pending",
   ).length;
+  const totalRequests = requests?.length ?? 0;
+  const returnedRate = totalRequests
+    ? Math.round((Number(_returnedRequests ?? 0) / totalRequests) * 100)
+    : 0;
 
   const statusCounts = requests ? getRequestStatusCounts(requests) : null;
 
@@ -573,52 +466,47 @@ export function DashboardPage() {
         transition={{ duration: 0.3 }}
         className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 overflow-x-hidden"
       >
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-display font-bold text-foreground">
-              Dashboard Overview
-            </h1>
-            <p className="text-muted-foreground font-body text-sm mt-1">
-              SVGA Book Bank — Admin Control Panel
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <AdminNotificationDrawer />
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs h-8"
-              onClick={() => {
-                queryClient.invalidateQueries({ queryKey: ["allUsers"] });
-                queryClient.invalidateQueries({ queryKey: ["allRequests"] });
-                queryClient.invalidateQueries({ queryKey: ["analytics"] });
-                queryClient.invalidateQueries({ queryKey: ["returnTimeline"] });
-                queryClient.invalidateQueries({
-                  queryKey: ["bookLifecycleFlow"],
-                });
-                queryClient.invalidateQueries({
-                  queryKey: ["adminNotifications"],
-                });
-              }}
-              data-ocid="admin.dashboard.refresh_button"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Refresh
-            </Button>
-            {hasUrgent && (
-              <div
-                className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-sm text-red-700"
-                data-ocid="admin.urgent_returns_badge"
-              >
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span className="font-medium text-xs sm:text-sm">
-                  Urgent returns pending
-                </span>
+        <section className="dashboard-hero-bg overflow-hidden rounded-[32px] min-h-[220px] p-6 sm:p-8 relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/95 via-slate-900/70 to-slate-900/15" />
+          <div className="relative z-10 grid gap-6 lg:grid-cols-[1.4fr_0.6fr] items-center">
+            <div className="max-w-3xl">
+              <p className="text-xs uppercase tracking-[0.32em] text-slate-300/80 font-medium">
+                Admin dashboard
+              </p>
+              <h1 className="mt-4 text-3xl sm:text-4xl font-display font-bold text-white leading-tight">
+                Good Morning,
+                <span className="block">SVGA Admin 👋</span>
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm sm:text-base text-slate-200/85 leading-relaxed">
+                Manage inventory, students, requests and procurement from one place.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-[24px] border border-white/15 bg-white/10 p-4 text-slate-100">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-slate-300">
+                  Today
+                </p>
+                <p className="mt-3 text-lg font-semibold text-white">{todayLabel}</p>
               </div>
-            )}
+              <div className="rounded-[24px] border border-white/15 bg-white/10 p-4 text-slate-100">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-slate-300">
+                  Pending requests
+                </p>
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {pendingRequests ?? 0}
+                </p>
+              </div>
+              <div className="rounded-[24px] border border-white/15 bg-white/10 p-4 text-slate-100">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-slate-300">
+                  Active procurement
+                </p>
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {pendingProcurementsCount}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
         {/* Session expiry warning — only show if data fetch errors, token was valid on load */}
         {sessionMaybeExpired && (

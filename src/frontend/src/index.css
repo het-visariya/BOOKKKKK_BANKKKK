@@ -137,6 +137,22 @@
     width: auto;
     object-fit: contain;
   }
+  .glass-nav,
+  .glass-navbar {
+    background: rgba(15, 23, 74, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(18px);
+  }
+  .dashboard-hero-bg {
+    background: linear-gradient(135deg, rgba(15, 23, 74, 0.95) 0%, rgba(30, 58, 138, 0.9) 40%, rgba(59, 130, 246, 0.95) 100%);
+    box-shadow: inset 0 0 120px rgba(15, 23, 74, 0.35);
+  }
+  .dashboard-card {
+    border: 1px solid rgba(229, 231, 235, 0.7);
+    box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    background: #ffffff;
+    border-radius: 1.125rem;
+  }
 
   /* ── Inventory Status Badges ── */
   .status-issued {
