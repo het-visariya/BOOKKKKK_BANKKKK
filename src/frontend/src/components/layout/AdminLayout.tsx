@@ -62,10 +62,15 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
-      <header className="fixed inset-x-[3%] top-6 z-50 mx-auto w-[94%] max-w-7xl">
-        <div className="glass-navbar rounded-[32px] border border-white/20 shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+      <header className="fixed inset-x-[1%] top-6 z-50 mx-auto w-[98%] max-w-[1900px]">
+        <motion.div
+          className="glass-navbar rounded-[32px] border border-white/12 shadow-[0_8px_30px_rgba(44,62,145,0.18)]"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
+        >
           <div className="flex items-center justify-between gap-4 px-5 py-4">
-            <div className="flex items-center gap-3">
+            <div style={{ flexBasis: "18%", minWidth: 160 }} className="flex items-center gap-3">
               <Link
                 to="/"
                 className="flex items-center gap-3 rounded-full bg-white/5 px-3 py-2 transition-all duration-200 hover:bg-white/15"
@@ -77,8 +82,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
 
-            <nav className="hidden flex-1 items-center justify-center md:flex overflow-x-auto pb-1">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-2 py-2 shadow-inner border border-white/10">
+            <nav style={{ flex: "1 1 57%", minWidth: 0 }} className="hidden md:flex items-center justify-center">
+              <div className="flex flex-1 items-center justify-evenly gap-6 md:gap-5 min-w-0 px-3">
                 {navItems.map((item) => {
                   const isActive = location.pathname.startsWith(item.path);
                   const isRequests = item.label === "Requests";
@@ -87,16 +92,16 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                       key={item.path}
                       to={item.path}
                       data-ocid={`admin.nav.${item.label.toLowerCase()}`}
-                      className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium tracking-[0.18em] transition-all duration-200 ease-out ${
+                      className={`nav-item flex items-center gap-2 whitespace-nowrap transition-all duration-200 ease-out text-sm ${
                         isActive
-                          ? "bg-white text-slate-950 shadow-[0_8px_20px_rgba(255,255,255,0.18)]"
-                          : "text-slate-200 hover:text-white hover:bg-white/15"
+                          ? "bg-white/18 border border-white/25 text-white shadow-[0_6px_18px_rgba(255,255,255,0.08)] px-4 py-2 rounded-full font-medium"
+                          : "text-slate-200 hover:text-white hover:bg-white/6 px-3 py-2 rounded-full"
                       }`}
                     >
-                      <item.icon className="h-4.5 w-4.5 text-current" />
-                      {item.label}
+                      <item.icon className="h-5 w-5 text-current shrink-0" />
+                      <span className="leading-none">{item.label}</span>
                       {isRequests && pendingCount > 0 && (
-                        <span className="inline-flex items-center justify-center h-5 min-w-[20px] rounded-full bg-slate-900 text-white text-[10px] font-semibold shadow-sm">
+                        <span className="inline-flex items-center justify-center h-4.5 min-w-[18px] rounded-full bg-blue-600 text-white text-[11px] font-semibold shadow-sm ml-1">
                           {pendingCount > 99 ? "99+" : pendingCount}
                         </span>
                       )}
@@ -106,8 +111,8 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               </div>
             </nav>
 
-            <div className="flex items-center gap-3 justify-end">
-              <div className="hidden sm:flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-white shadow-sm backdrop-blur-md transition-all duration-200 hover:bg-white/15">
+            <div style={{ flexBasis: "25%", minWidth: 220 }} className="flex items-center gap-3 justify-end">
+              <div className="hidden sm:flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-white shadow-sm backdrop-blur-md transition-all duration-200 hover:bg-white/15 profile-card">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-sm font-semibold text-white">
                   {adminUsername.charAt(0)}
                 </div>
@@ -129,7 +134,6 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
                 <LogOut className="h-5 w-5" />
                 <span className="text-sm font-medium">Sign out</span>
               </Button>
-
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((v) => !v)}
@@ -145,7 +149,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       </header>
 
       {/* Mobile nav drawer */}

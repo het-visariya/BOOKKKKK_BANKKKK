@@ -139,9 +139,61 @@
   }
   .glass-nav,
   .glass-navbar {
-    background: rgba(15, 23, 74, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(18px);
+    /* Darker premium navy with soft glass */
+    background: rgba(47,61,120,0.9); /* slightly darker */
+    border: 1px solid rgba(255,255,255,0.10);
+    backdrop-filter: blur(20px) saturate(130%);
+    -webkit-backdrop-filter: blur(20px) saturate(130%);
+    box-shadow: 0 14px 40px rgba(44,62,145,0.22);
+    color: #E8EEF9;
+    position: relative;
+    overflow: visible;
+    /* ensure hardware-accelerated transform for smoother motion */
+    transform: translateZ(0);
+    animation: none;
+  }
+
+  /* sliding glass sheen / window effect */
+  .glass-navbar::before {
+    content: "";
+    position: absolute;
+    left: -60%;
+    top: 0;
+    height: 100%;
+    width: 60%;
+    background: linear-gradient(120deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.02) 100%);
+    transform: skewX(-18deg) translateX(0);
+    pointer-events: none;
+    filter: blur(8px);
+    mix-blend-mode: overlay;
+    opacity: 0.9;
+    animation: glass-sheen 1.6s ease-out 0.12s both;
+  }
+
+  @keyframes glass-sheen {
+    0% {
+      transform: skewX(-18deg) translateX(-100%);
+      opacity: 0;
+    }
+    50% {
+      transform: skewX(-18deg) translateX(8%);
+      opacity: 0.9;
+    }
+    100% {
+      transform: skewX(-18deg) translateX(120%);
+      opacity: 0;
+    }
+  }
+  /* Nav item micro-interactions */
+  .nav-item {
+    transition: transform 220ms ease, color 180ms ease, background 180ms ease;
+  }
+  .nav-item:hover {
+    transform: translateY(-2px);
+  }
+  .profile-card:hover {
+    transform: translateY(-3px);
+    transition: transform 220ms ease;
   }
   .dashboard-hero-bg {
     background: linear-gradient(135deg, rgba(15, 23, 74, 0.95) 0%, rgba(30, 58, 138, 0.9) 40%, rgba(59, 130, 246, 0.95) 100%);
