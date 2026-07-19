@@ -126,8 +126,6 @@ const COURSES = [
   "BA",
   "BBA",
   "BCA",
-  "MBBS",
-  "BDS",
   "B.Pharm",
   "Engineering",
   "Diploma",

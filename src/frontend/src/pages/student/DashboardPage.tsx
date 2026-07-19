@@ -943,7 +943,7 @@ export function DashboardPage() {
                     }
                     data-ocid="dashboard.empty.browse_button"
                   >
-                    Browse Books
+                    Request Books
                   </Button>
                 </CardContent>
               </Card>

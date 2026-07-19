@@ -56,8 +56,6 @@ const COURSES = [
   "FY-Degree",
   "SY-Degree",
   "TY-Degree",
-  "MBBS",
-  "BDS",
   "Engineering",
   "Commerce",
   "Arts",

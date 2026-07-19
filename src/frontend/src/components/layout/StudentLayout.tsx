@@ -37,7 +37,7 @@ const navItems = [
     path: "/student/dashboard" as const,
     icon: LayoutDashboard,
   },
-  { label: "Browse Books", path: "/student/books" as const, icon: BookOpen },
+  { label: "Request Books", path: "/student/books" as const, icon: BookOpen },
   {
     label: "My Requests",
     path: "/student/requests" as const,

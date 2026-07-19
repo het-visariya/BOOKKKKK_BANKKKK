@@ -37,6 +37,7 @@ import {
   User,
   Zap,
 } from "lucide-react";
+import SpecialRequestLifecycle from "@/components/ui/SpecialRequestLifecycle";
 
 function BookCard({
   book,
@@ -799,34 +800,58 @@ function ChallanContent({
                 </span>
               </div>
               <div className="space-y-2">
-                {request.requestedBooks.map((b, i) => (
-                  <BookCard
-                    key={`${b.title}-${i}`}
-                    book={{
-                      title: b.title,
-                      author: b.author,
-                      edition: b.edition,
-                      publisher: b.publisher,
-                    }}
-                    index={i}
-                    status={normalizeManualDecision(b.decision) as
-                      | "Approved"
-                      | "Rejected"
-                      | "Reserved"
-                      | "Pending"
-                      | "SpecialOrder"
-                      | "Ordered"
-                      | "Procured"
-                      | "ReadyForCollection"
-                      | "Issued"
-                      | "Returned"}
-                    author={b.author}
-                    edition={b.edition}
-                    publisher={b.publisher}
-                    reason={b.note}
-                    dataOcid={`challan.manual_book.${i + 1}`}
-                  />
-                ))}
+                {request.requestedBooks
+                  .map((b, i) => ({ book: b, idx: i }))
+                  // Exclude procurements already returned from active list
+                  .filter(({ book }) => {
+                    const matched = procurements.find(
+                      (p) => p.bookTitle.toLowerCase().trim() === book.title.toLowerCase().trim(),
+                    );
+                    return !(matched && String(matched.status).toLowerCase() === "returned");
+                  })
+                  .map(({ book, idx }, i) => {
+                    const status = normalizeManualDecision(book.decision);
+                    return (
+                      <div key={`${book.title}-${idx}`}>
+                        <BookCard
+                          book={{
+                            title: book.title,
+                            author: book.author,
+                            edition: book.edition,
+                            publisher: book.publisher,
+                          }}
+                          index={i}
+                          status={status as
+                            | "Approved"
+                            | "Rejected"
+                            | "Reserved"
+                            | "Pending"
+                            | "SpecialOrder"
+                            | "Ordered"
+                            | "Procured"
+                            | "ReadyForCollection"
+                            | "Issued"
+                            | "Returned"}
+                          author={book.author}
+                          edition={book.edition}
+                          publisher={book.publisher}
+                          reason={book.note}
+                          dataOcid={`challan.manual_book.${i + 1}`}
+                        />
+                        {/* show lifecycle timeline using shared component */}
+                        <div className="mt-2">
+                          {/* dynamically find procurement status if exists */}
+                          <SpecialRequestLifecycle
+                            status={
+                              (procurements.find(
+                                (p) => p.bookTitle.toLowerCase().trim() === book.title.toLowerCase().trim(),
+                              )?.status as string) || normalizeManualDecision(book.decision)
+                            }
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}

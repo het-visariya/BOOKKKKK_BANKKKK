@@ -15,6 +15,7 @@ import {
   useGetMyReservations,
   useMyRequests,
 } from "@/hooks/useBackend";
+import SpecialRequestLifecycle from "@/components/ui/SpecialRequestLifecycle";
 import type {
   BookApproval,
   BookRequest,
@@ -507,18 +508,24 @@ function FullChallanView({
             </span>
           </div>
           <div className="space-y-2">
-            {manualBooksWithStatus.map(({ book, status }, i) => (
-              <ChallanBookCard
-                key={`${book.title}-${i}`}
-                title={book.title}
-                author={book.author}
-                edition={book.edition}
-                publisher={book.publisher}
-                status={status}
-                index={i}
-                ocid={`request.manual_book.${i + 1}`}
-              />
-            ))}
+            {manualBooksWithStatus
+              .filter(({ book, status }) => String(status).toLowerCase() !== "returned")
+              .map(({ book, status }, i) => (
+                <div key={`${book.title}-${i}`}>
+                  <ChallanBookCard
+                    title={book.title}
+                    author={book.author}
+                    edition={book.edition}
+                    publisher={book.publisher}
+                    status={status}
+                    index={i}
+                    ocid={`request.manual_book.${i + 1}`}
+                  />
+                  <div className="mt-2">
+                    <SpecialRequestLifecycle status={status} />
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}
@@ -1062,7 +1069,7 @@ export function RequestsPage() {
                 icon={ClipboardList}
                 title="No requests yet"
                 description="Browse the library and submit your first book request."
-                actionLabel="Browse Books"
+                actionLabel="Request Books"
                 onAction={() =>
                   navigate({
                     to: "/student/books",
@@ -1125,7 +1132,7 @@ export function RequestsPage() {
                 icon={Clock}
                 title="No reservations"
                 description="When a book is unavailable, you can join the waiting list. It will appear here."
-                actionLabel="Browse Books"
+                actionLabel="Request Books"
                 onAction={() =>
                   navigate({
                     to: "/student/books",
@@ -1186,7 +1193,7 @@ export function RequestsPage() {
                 icon={Package}
                 title="No procurement requests"
                 description="Procurement requests are created when you urgently need a book not in the library."
-                actionLabel="Browse Books"
+                actionLabel="Request Books"
                 onAction={() =>
                   navigate({
                     to: "/student/books",

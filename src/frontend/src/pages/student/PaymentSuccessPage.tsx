@@ -250,7 +250,7 @@ export function PaymentSuccessPage() {
               }
               data-ocid="payment_success.browse_books_button"
             >
-              Browse Books
+              Request Books
             </Button>
           </div>
         </div>
